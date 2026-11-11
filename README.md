@@ -222,6 +222,18 @@ glowpoint warns when two fixtures from different layers are at the same place (f
 
 ## Light and ceiling types
 
+| Type | What it is |
+|---|---|
+| [`downlight`](#downlight) | Round downlight symbol in a ceiling, with a beam and a pool |
+| [`sconce`](#sconce) | Wall light with a wash up and down |
+| [`uplight`](#uplight) | In-floor uplight that grazes a column face or wall |
+| [`wash`](#wash) | Wall wash from the top of a wall, optionally from a ceiling slot |
+| [`pendant`](#pendant) | Pendant on a cord, from a ceiling or from inside coffers |
+| [`fixture`](#fixture) | A specific fixture, drawn from its parts (trim, lens, rings, slots) |
+| [`waffle`](#waffle) | Square or round coffers cut into a ceiling |
+
+More types can be added as plugins (see [Adding your own types](#adding-your-own-types-plugins)).
+
 Positions on a surface:
 
 | Surface | Position keys |
@@ -283,10 +295,12 @@ A pendant hanging from a horizontal surface, with a glow around the shade and an
 | `from_y` | | Instead of `plane`: the height where the cord starts. For pendants in coffers: `"coffers('Waffle', 'y')"` |
 | `x`, `z` | | Position(s) |
 | `y` | | Height of the bottom of the shade above the floor, ft. Use this for "3 ft above the desk": `"box('Desk').top + 3"` |
-| `drop` | 10 | If there is no `y`: distance from the surface to the bottom of the shade, ft |
+| `drop` | 10 | Distance from the cord start (the `plane` or `from_y`) to the bottom of the shade, ft. This sets the pendant length |
 | `d`, `h` | 1.5, 0.6 | Shade diameter and height, ft |
 | `pool_r` | 0 | Radius of a light pool, ft (0 = none) |
 | `beam_to` | 0 | Height of the pool (0 = floor) |
+
+Give the length with `drop` or the height with `y`. If both are given, `y` is used. For pendants of different lengths, use one feature for each length.
 
 ### `fixture`
 A specific fixture, drawn from its parts (trim, lens, rings, slots), flush on a surface. Use it to show the real fixture of the design, not a generic symbol. The fixture is defined one time in a **fixture list** and used in many places.
@@ -379,6 +393,7 @@ Expressions refer to the model by name. Use them for all positions that depend o
 | `spaced(lo, hi, n)` | n positions, equal spaces, half a space at each end |
 | `spaced_ends(lo, hi, n)` | n positions, the first at lo and the last at hi |
 | `every(start, stop, step)` | start, start + step, … up to stop |
+| `list[a:b:c]` | Part of a list, as in Python: `coffers('Waffle', 'x')[1::2]` is every second item, starting with the second |
 | `inch(n)` | n inches in feet |
 | `visible_faces('column')` | Every face of every column that is visible in the drawing |
 | `coffers('Waffle', 'x')`, `coffers('Waffle', 'z')` | Centres of all full coffers of a waffle (square or round, with its `align`), across and in depth. Use both for one item in every coffer |
@@ -392,7 +407,9 @@ Examples:
 "z": "every(centre_line('Column L1', 'Column R1', 'Z') + 9, surf('Back wall').at - 6, 10)"
 ```
 
-Expressions run in a restricted Python evaluator with only these names. Plain names such as `"plane": "Ceiling"` are not evaluated.
+Expressions run in a restricted Python evaluator with only these names (and Python arithmetic, lists, and slices).
+
+**Text that is not an expression.** These keys always hold plain text and are never evaluated: `layer`, `type`, `name`, `note`, `plane`, `slot`, `fixture`, `shape`, `align`, `surface_name`. Every other text value is an expression, so a new text option in a plugin must be added to that list in `glowpoint/render.py`, or a word such as `round` is read as a Python name.
 
 ## Outputs
 
