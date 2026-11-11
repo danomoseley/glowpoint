@@ -345,7 +345,15 @@ Make `model.json` in the project folder with the camera from step 1:
 
 ### 3. Build the surfaces
 
-Measure the room in feet with the measure tool, then add the surfaces and boxes to `model.json`. The tool reads the camera from `model.json` (or give it `camera.json` instead of the project folder):
+To find exact pixel positions, use the zoom tool. It makes an enlarged image with the original pixel coordinates on a grid:
+
+```bash
+python3 -m glowpoint.zoom projects/new/drawing.png                       # whole image, coarse grid
+python3 -m glowpoint.zoom projects/new/drawing.png 150 390 330 500       # zoom on a box (X0 Y0 X1 Y1)
+python3 -m glowpoint.zoom projects/new/drawing.png 150 390 330 500 --mark 302,444   # confirm a point
+```
+
+Then measure the room in feet with the measure tool, then add the surfaces and boxes to `model.json`. The tool reads the camera from `model.json` (or give it `camera.json` instead of the project folder):
 
 ```bash
 python3 -m glowpoint.measure projects/new floor 302 444          # floor point:  X -22.85  Z 52.16
@@ -372,7 +380,9 @@ For a one-point image, set the lens from something square in plan, for example a
 
 Hand drawings are not exact. Match the model to the drawing, not to an ideal grid.
 
-### Test
+### Tests
+
+`python3 tests/test_render.py` draws the lobby example and compares it with a reference image (`--update` accepts an intended change).
 
 `python3 tests/test_calibrate.py` renders the lobby model from known cameras (two- and three-point, with tilt and roll), runs the setup on each image, and compares the result with the true camera. Current results: lens within 0.3 %, angles within 0.15°, scale within 1 %.
 
@@ -439,7 +449,7 @@ Only change the files in `glowpoint/` to fix a bug or add a feature for everybod
 
 ## Notes for AI agents
 
-glowpoint is designed so that an agent can take a request in plain words and place lights reliably.
+glowpoint is designed so that an agent can take a request in plain words and place lights reliably. [AGENTS.md](AGENTS.md) has the rules and the work sequence (Claude Code reads it through `CLAUDE.md`).
 
 - **Always use relationships.** Write `"spaced(box('Desk').z0, box('Desk').z1, 3)"`, not three numbers. If the model is corrected later, the lights follow.
 - **Add the objects you refer to.** If a request mentions an object (a desk, a bench, a stair), add it as a box in `model.json` first. Then refer to it.
@@ -449,9 +459,9 @@ glowpoint is designed so that an agent can take a request in plain words and pla
 - **Only edit `design.json` for design changes** and `model.json` for geometry changes. Keep the code generic.
 - **For a new kind of light, write a plugin** in `<project>/types/` (start from `examples/types/pendant.py`). Do not change `glowpoint/` for one project.
 - **Keep user projects out of the repo.** Put them in `local/` or outside the clone.
-- **Set up a new image with the tools:** `glowpoint.calibrate` for the camera, `glowpoint.measure` for every surface. Do not estimate positions by eye.
+- **Set up a new image with the tools:** `glowpoint.calibrate` for the camera, `glowpoint.zoom` to read pixels, `glowpoint.measure` for every surface. Do not estimate positions by eye.
 - **Coordinates:** X right, Y up, Z into the image, feet. Horizontal surfaces use (x, z). Walls use (along, y).
-- **Run the tests** after a code change: `python3 tests/test_calibrate.py`, and render the lobby with `--linework` to see that it still works.
+- **Run the tests** after a code change: `python3 tests/test_calibrate.py` and `python3 tests/test_render.py`.
 
 Typical request to design file:
 
