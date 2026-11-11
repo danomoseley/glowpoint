@@ -20,6 +20,8 @@ The output is diagrammatic, not photorealistic. It shows **what is lit and where
 - [Relationships (expressions)](#relationships-expressions)
 - [Outputs](#outputs)
 - [Setting up a new drawing](#setting-up-a-new-drawing)
+- [Adding your own types (plugins)](#adding-your-own-types-plugins)
+- [Working without merge conflicts](#working-without-merge-conflicts)
 - [Notes for AI agents](#notes-for-ai-agents)
 - [Limits](#limits)
 - [Roadmap](#roadmap)
@@ -250,6 +252,67 @@ The setup is partly manual for now. It takes about 15 minutes for a clean drawin
 
 Hand drawings are not exact. Match the model to the drawing, not to an ideal grid.
 
+## Adding your own types (plugins)
+
+You can add light types, ceiling types, and expression helpers **without changing glowpoint's files**. A plugin is one Python file. glowpoint loads plugins from:
+
+1. Each folder in the `GLOWPOINT_TYPES` environment variable (separate several folders with `:` on Linux and macOS, `;` on Windows). Use this for types that a whole office shares, for example a folder on a shared drive.
+2. `<project>/types/`. Use this for a type that only one project needs.
+
+A later file can replace a type with the same name, so a project can change an office type for itself. glowpoint prints each plugin that it loads. Files that start with `_` are skipped.
+
+A plugin can define any of these:
+
+```python
+LIGHTS = {"pendant": pendant}            # function(canvas, feature)
+GEOMETRY = {"vault": (prepare, draw)}    # prepare(model, feature) before ray casting,
+                                         # draw(canvas, feature, base_image) -> new base image
+def helpers(model):                      # extra names for design.json expressions
+    return {"between": lambda a, b: ...}
+```
+
+[`examples/types/pendant.py`](examples/types/pendant.py) is a complete example: a pendant light and a `between('Column L1', 'Column R1')` helper. Copy it to start a new type.
+
+Inside a light function, the canvas gives you:
+
+| Name | Use |
+|---|---|
+| `cv.m` | The model: `surface(name)`, `to3d(surface, u, v)`, `project(points)`, `boxes` |
+| `cv.ids`, `cv.P`, `cv.dep` | For each pixel: surface index, 3D point, depth |
+| `cv.glow(mask, strength)` | Add warm light to pixels (strength 0 to 1 per pixel) |
+| `cv.seg(A, B, width)` | Draw a 3D line, hidden where something is in front |
+| `cv.visible(points, pixels)` | True for each 3D point that is not hidden |
+| `cv.img`, `cv.over` | The linework image and the light image (OpenCV BGR arrays) |
+| `cv.add(feature, type, surface, point, ...)` | Add a row to positions.csv |
+
+When a plugin type is useful for everybody, move it into `glowpoint/features.py` in a pull request.
+
+## Working without merge conflicts
+
+glowpoint keeps your work separate from the code, so you can update glowpoint with `git pull` at any time.
+
+| Your work | Where to keep it | In git? |
+|---|---|---|
+| Projects (drawing, model, design) | Any folder outside the clone, or `local/` inside it | No (`local/` is ignored) |
+| Office light types | A shared folder in `GLOWPOINT_TYPES` | Your choice, in your own repo |
+| Project light types | `<project>/types/` | With the project |
+| Drawings and renders | In the project folder | No (`drawing.*` and `out/` are ignored) |
+
+Run any project from anywhere:
+
+```bash
+python3 -m glowpoint.render ~/work/smith-lobby --check
+GLOWPOINT_TYPES=~/office/glowpoint-types python3 -m glowpoint.render ~/work/smith-lobby
+```
+
+To try a different design without changing `design.json`, give another file:
+
+```bash
+python3 -m glowpoint.render projects/lobby --design design.option-b.json --out option-b.png
+```
+
+Only change the files in `glowpoint/` to fix a bug or add a feature for everybody.
+
 ## Notes for AI agents
 
 glowpoint is designed so that an agent can take a request in plain words and place lights reliably.
@@ -260,6 +323,8 @@ glowpoint is designed so that an agent can take a request in plain words and pla
 - **Verify with positions.csv.** After a render, read the CSV and confirm the numbers that the user asked for (spacing, distances, counts). Look at `concept.png` too.
 - **State your assumptions.** When a request leaves out a size (aperture, rib width, height), choose a normal value and tell the user which value you chose.
 - **Only edit `design.json` for design changes** and `model.json` for geometry changes. Keep the code generic.
+- **For a new kind of light, write a plugin** in `<project>/types/` (start from `examples/types/pendant.py`). Do not change `glowpoint/` for one project.
+- **Keep user projects out of the repo.** Put them in `local/` or outside the clone.
 - **Coordinates:** X right, Y up, Z away from the viewer, feet. Horizontal surfaces use (x, z). Walls use (along, y).
 
 Typical request to design file:

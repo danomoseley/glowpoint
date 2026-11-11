@@ -3,3 +3,5 @@ __pycache__/
 # Architect drawings and renders stay private
 projects/*/drawing.*
 projects/*/out/
+# Private projects and plugins inside a clone
+local/

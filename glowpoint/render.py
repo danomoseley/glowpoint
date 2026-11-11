@@ -12,6 +12,7 @@ import cv2
 from .model import Model
 from .expr import namespace, ev
 from . import features as F
+from . import plugins
 
 GEOMETRY = {"waffle": (F.waffle_prepare, F.waffle_draw)}
 
@@ -76,26 +77,31 @@ def render(project, check=False, out_name="concept.png", design_file="design.jso
         cv2.imwrite(os.path.join(project, "out", "check.png"), check_image(m, base))
 
     layers = design["layers"]
-    ns = namespace(m)
+    lights, geometry, helper_factories, loaded = plugins.load(project, F.LIGHTS, GEOMETRY)
+    for path in loaded: print(f"loaded plugin {path}")
+    extra = lambda: {k: v for h in helper_factories for k, v in h(m).items()}
+    ns = namespace(m); ns.update(extra())
     # 1. architecture that changes the model (waffle ceilings): evaluate and cut holes before ray casting
     geo = []
     for L in layers:
         for f in L["features"]:
-            if f["type"] in GEOMETRY:
-                fe = evaluate(f, ns); fe["layer"] = L["name"]; GEOMETRY[f["type"]][0](m, fe); geo.append(fe)
+            if f["type"] in geometry:
+                fe = evaluate(f, ns); fe["layer"] = L["name"]; geometry[f["type"]][0](m, fe); geo.append(fe)
     cv = F.Canvas(m, base); cv.raycast()
     for fe in geo:
-        base = GEOMETRY[fe["type"]][1](cv, fe, base)
+        base = geometry[fe["type"]][1](cv, fe, base)
     cv.img = base.copy(); cv.over = base.copy()
     # 2. lights: may refer to what is visible
     vis = [(s, int((cv.ids == i).sum())) for i, s in enumerate(m.surfaces)]
-    ns = namespace(m, visible=vis)
+    ns = namespace(m, visible=vis); ns.update(extra())
     for L in layers:
         for f in L["features"]:
-            if f["type"] in GEOMETRY: continue
+            if f["type"] in geometry: continue
             fe = evaluate(f, ns); fe["layer"] = L["name"]
-            if f["type"] not in F.LIGHTS: raise ValueError(f"Unknown type '{f['type']}'. Known: {sorted(F.LIGHTS)}")
-            F.LIGHTS[f["type"]](cv, fe)
+            if f["type"] not in lights:
+                raise ValueError(f"Unknown type '{f['type']}'. Known: {sorted(lights) + sorted(geometry)}. "
+                                 f"Add new types in {project}/types/ or a GLOWPOINT_TYPES folder.")
+            lights[f["type"]](cv, fe)
     img = cv.finish()
     if design.get("legend", True):
         img = legend(img, design.get("title", "LIGHTING CONCEPT"), [(L["name"], L.get("description", "")) for L in layers])
