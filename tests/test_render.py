@@ -165,6 +165,31 @@ def main(update=False):
             and any(n.startswith("M (3.62 in)") for n in sizes) and any(n.startswith("3.0 (3.00 in)") for n in sizes))
     print(f"{'PASS' if good else 'FAIL'}  track lighting: {len(tracks)} tracks, {len(heads)} heads (expected 45), sizes {sorted(sizes)}")
     ok &= good
+    # 10. glow, legend below, wash slot always on the room side, measure box
+    d5 = json.load(open(os.path.join(proj, "design.json")))
+    d5["legend_at"] = "below"
+    for L in d5["layers"]:
+        for f in L["features"]:
+            if f.get("slot"): f["slot"]["offset"] = -abs(f["slot"]["offset"])   # a wrong sign must not matter
+    d5["layers"].append({"name": "Glow", "features": [{"type": "glow", "x": [-12, 0], "y": 3, "z": 40, "r": 1.5}]})
+    json.dump(d5, open(os.path.join(proj, "design.misc.json"), "w"))
+    render(proj, linework=True, out_name="misc.png", design_file="design.misc.json")
+    img2 = cv2.imread(os.path.join(proj, "out", "misc.png"))
+    rows = list(csv.DictReader(open(os.path.join(proj, "out", "positions_misc.csv"))))
+    glows = [r for r in rows if r["type"] == "glow"]
+    base_rows = list(csv.DictReader(open(REF_POS)))
+    wash_same = [r for r in rows if r["type"] == "wash"] == [r for r in base_rows if r["type"] == "wash"]
+    from glowpoint.measure import main as measure_main
+    import io, contextlib
+    out = io.StringIO()
+    with contextlib.redirect_stdout(out):
+        measure_main([proj, "box", "203", "492", "302", "444", "--top", "203", "441", "--depth", "2.5", "--name", "Desk"])
+    box = json.loads(out.getvalue().splitlines()[0])
+    box_ok = abs(box["Y"][1] - 3.26) < 0.05 and abs(box["Z"][1] - 52.16) < 0.1
+    good = img2.shape[0] > img.shape[0] and len(glows) == 2 and wash_same and box_ok
+    print(f"{'PASS' if good else 'FAIL'}  legend below: {img2.shape[0] > img.shape[0]}, glows: {len(glows)}, "
+          f"slot side automatic: {wash_same}, measure box: {box}")
+    ok &= good
     return ok
 
 

@@ -65,6 +65,7 @@ class Model:
         self.raw = d
         self.drawing = os.path.join(project_dir, d["drawing"])
         self.set_camera(d["camera"])
+        self.C_drawing = self.C.copy()        # the drawing's eye: the room is on this side of every wall
         self.surfaces = []
         for s in d["surfaces"]:
             s = dict(s); s["axis"] = AX[s["axis"]]; self.surfaces.append(s)

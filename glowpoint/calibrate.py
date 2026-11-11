@@ -11,8 +11,10 @@ also works on clean hand drawings, with less accuracy.
      - three finite vanishing points: principal point = their orthocentre, f from any pair
      - two finite (verticals parallel): principal point = image centre, f from the two
      - one finite (one-point): f cannot be found from lines; give --f, or measure it later
-  4. Sets the scale from one known vertical: --known x1,y1,x2,y2,H means the floor point (x1,y1) and the
-     point (x2,y2) straight above it are H feet apart. Or give --eye-height.
+  4. Sets the scale from known verticals: --known x1,y1,x2,y2,H means the floor point (x1,y1) and the
+     point (x2,y2) straight above it are H feet apart. Give --known several times to check the scale:
+     the tool prints the eye height from each one and how much they disagree, and uses the median.
+     Or give --eye-height.
 
 The world frame: origin on the floor below the camera, Y up, Z along the vanishing direction that is
 most in front of the camera, X to the right of it. Write model.json surfaces in this frame.
@@ -183,7 +185,9 @@ def scale_from_known(cam, known):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("image"); ap.add_argument("--known"); ap.add_argument("--eye-height", type=float)
+    ap.add_argument("image"); ap.add_argument("--known", action="append", default=[],
+                    help="x1,y1,x2,y2,H; give it several times to check the scale")
+    ap.add_argument("--eye-height", type=float)
     ap.add_argument("--f", type=float, help="lens in pixels, if known (needed for one-point views)")
     ap.add_argument("--tol", type=float, default=1.0, help="line-to-vanishing-point tolerance, degrees (hand drawings: 2)")
     ap.add_argument("--out", default="camera.json"); ap.add_argument("--overlay", default="calibration.png")
@@ -215,7 +219,16 @@ def main():
     for n in cam["notes"]: print("  note:", n)
     h = a.eye_height
     if a.known:
-        h = scale_from_known(cam, [float(x) for x in a.known.split(",")]); print(f"  eye height from the known dimension: {h:.2f} ft")
+        hs = []
+        for k in a.known:
+            vals = [float(x) for x in k.split(",")]
+            hk = scale_from_known(cam, vals); hs.append(hk)
+            print(f"  eye height from the known {vals[4]:g} ft at ({vals[0]:g},{vals[1]:g}): {hk:.2f} ft")
+        h = float(np.median(hs))
+        if len(hs) > 1:
+            spread = (max(hs) - min(hs))/h*100
+            print(f"  known dimensions disagree by {spread:.0f}%; using the median, {h:.2f} ft"
+                  + ("  <-- check them: more than 10% means a wrong pixel, a wrong dimension, or an inexact drawing" if spread > 10 else ""))
     if h is None:
         h = 5.5; print("  eye height not given: using 5.5 ft. Give --known or --eye-height for the real scale.")
     out = dict(f=round(cam["f"], 2), principal=[round(v, 2) for v in cam["principal"]], position=[0, round(h, 3), 0],

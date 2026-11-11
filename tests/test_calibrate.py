@@ -68,6 +68,19 @@ def run(verbose=True):
     good = res["kind"] == "one-point" and R is None
     ok &= good
     print(f"{'PASS' if good else 'FAIL'}  one-point lobby camera: detected '{res['kind']}', asks for the lens: {R is None}")
+    # several known dimensions: two consistent ones agree, a wrong one shows as a large spread
+    m = Model(PROJECT); cam = CAMERAS["two-point, turned 30 deg"]; m.set_camera(cam)
+    img = linework.draw(m, (700, 1050)); gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    S = CAL.segments(gray); vps, c, scale = CAL.find_vps(S, gray.shape); res, R = CAL.solve_camera(vps, c, scale)
+    hs = []
+    for name, H in (("Column R1", 10.0), ("Column L2", 10.0), ("Column R2", 8.0)):    # the last one is wrong on purpose
+        b = m.boxes[name]; (x1, y1), (x2, y2) = m.project([[b.x0, 0, b.z0], [b.x0, 10, b.z0]])
+        hs.append(CAL.scale_from_known(res, (x1, y1, x2, y2, H)))
+    agree = abs(hs[0] - hs[1])/hs[0] < 0.02; spread = (max(hs) - min(hs))/np.median(hs)
+    good = agree and spread > 0.15 and abs(np.median(hs) - cam["position"][1]) < 0.1
+    ok &= good
+    print(f"{'PASS' if good else 'FAIL'}  several known dimensions: {', '.join(f'{h:.2f}' for h in hs)} ft, "
+          f"spread {spread*100:.0f}% (wrong one detected), median {np.median(hs):.2f} ft (true {cam['position'][1]})")
     print(f"test images in {out_dir}")
     return ok
 

@@ -228,8 +228,10 @@ def wash(cv, f):
     g = f.get("strength", 0.8)*np.exp(-np.clip(yt-Yp, 0, None)/f.get("fade", 10.0))*edge*(Yp <= yt)
     cv.glow(mask, g)
     if f.get("slot"):
-        sp = m.surface(f["slot"]["plane"]); sx = f["slot"]["offset"]
-        yv = sp["at"]; wall = s["at"]
+        sp = m.surface(f["slot"]["plane"]); wall = s["at"]
+        side = 1.0 if m.C_drawing[a] > wall else -1.0               # the slot is always on the room side
+        sx = side*abs(f["slot"]["offset"])
+        yv = sp["at"]
         if a == 0: cv.seg([wall+sx, yv, u0], [wall+sx, yv, u1], 2)
         else: cv.seg([u0, yv, wall+sx], [u1, yv, wall+sx], 2)
     cv.add(f, "wash", f["plane"], m.to3d(s, u0, yt), note=f"range {u0:.2f}..{u1:.2f}")
@@ -629,5 +631,26 @@ def track(cv, f):
            note=f"{mounting}, {len(as_list(f['at']))} run(s) along {direction.upper()}, {u1-u0:.1f} ft, {n_heads_total} heads")
 
 
-LIGHTS = dict(downlight=downlight, sconce=sconce, uplight=uplight, wash=wash, pendant=pendant, fixture=fixture,
+def glow(cv, f):
+    """A soft glow around a point: a table lamp, floor lamp, or candle that is already in the drawing,
+    or any small light source. The glow lights nearby surfaces and shows a halo around the source."""
+    m = cv.m
+    xs, ys, zs = as_list(f["x"]), as_list(f["y"]), as_list(f["z"])
+    r = f.get("r", 2.0); st = f.get("strength", 0.7); halo = f.get("halo", 0.6)
+    for x, y, z in itertools.product(xs, ys, zs):
+        c = np.array([x, y, z], float)
+        if m.depth([c])[0] <= 0:
+            cv.add(f, "glow", "point", c.tolist(), visible=False); continue
+        pc = m.project([c])[0]; vis = bool(cv.visible([c.tolist()], [pc])[0])
+        d3 = np.linalg.norm(cv.P - c, axis=-1)
+        cv.glow((cv.ids >= 0) & (d3 < 3*r), st*np.exp(-(d3/r)**2))           # light on the surfaces nearby
+        if vis and halo > 0:                                                  # halo around the source itself
+            rpx = max(4, int(m.f*halo/max(m.depth([c])[0], 0.1)))
+            H, W = cv.ids.shape; yy, xx = np.ogrid[:H, :W]
+            g = np.minimum(1.0, 1.3*np.exp(-(((xx-pc[0])**2 + (yy-pc[1])**2)/(rpx**2))))
+            cv.glow(g > 0.05, g)
+        cv.add(f, "glow", "point", c.tolist(), visible=vis)
+
+
+LIGHTS = dict(glow=glow, downlight=downlight, sconce=sconce, uplight=uplight, wash=wash, pendant=pendant, fixture=fixture,
               luminous=luminous, slots=slots, linear_pendant=linear_pendant, track=track)

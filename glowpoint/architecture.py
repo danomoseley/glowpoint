@@ -47,7 +47,7 @@ def cove_prepare(m, f):
         if a == 1: raise ValueError("a wall cove needs a wall (a surface at constant X or Z)")
         u0, u1 = f["range"]; y = f["y"]; dep = f.get("depth", 1.0); h = f.get("h", 0.5)
         # the ledge projects from the wall towards the room: towards the camera side of the wall
-        side = 1 if m.C[a] > wall["at"] else -1                     # +1: the room is on the high side of the wall
+        side = 1 if m.C_drawing[a] > wall["at"] else -1             # +1: the room is on the high side of the wall
         w0, w1 = sorted([wall["at"], wall["at"] + side*dep])
         hk = 2 if a == 0 else 0
         rng = {("X" if a == 0 else "Z"): [w0, w1], ("Z" if a == 0 else "X"): [u0, u1], "Y": [y-h, y]}

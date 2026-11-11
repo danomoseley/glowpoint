@@ -37,11 +37,19 @@ def evaluate(f, ns):
     return {k: (ev(v, ns) if k not in ("layer", "type", "name", "note", "plane", "slot", "fixture", "shape", "align", "kind", "direction", "color", "ceiling", "style", "top", "mounting", "head") else v) for k, v in f.items()}
 
 
+LEGEND_PLACES = ("bottom-left", "bottom-right", "top-left", "top-right", "below")
+
+
 def legend(img, title, layers, at="bottom-left"):
+    if at not in LEGEND_PLACES: raise ValueError(f"legend_at must be one of {LEGEND_PLACES}")
     lines = [title] + [f"{i+1}  {name} - {desc}" if desc else f"{i+1}  {name}" for i, (name, desc) in enumerate(layers)]
     w = max(cv2.getTextSize(t, 0, 0.42, 1)[0][0] for t in lines) + 16
     h = 18*len(lines) + 12
-    H, W = img.shape[:2]; x0, y0 = 12, H - h - 12
+    if at == "below":                                     # a white band under the drawing: covers nothing
+        img = np.vstack([img, np.full((h + 24, img.shape[1], 3), 255, np.uint8)])
+    H, W = img.shape[:2]
+    x0 = 12 if at in ("bottom-left", "top-left", "below") else W - w - 12
+    y0 = 12 if at.startswith("top") else H - h - 12
     ov = img.copy(); cv2.rectangle(ov, (x0, y0), (x0+w, y0+h), (255, 255, 255), -1)
     img = cv2.addWeighted(ov, 0.88, img, 0.12, 0)
     cv2.rectangle(img, (x0, y0), (x0+w, y0+h), (0, 0, 0), 1)
@@ -183,7 +191,8 @@ def render(project, check=False, out_name="concept.png", design_file="design.jso
     warn_overlaps(cv.report)
     img = cv.finish()
     if design.get("legend", True):
-        img = legend(img, design.get("title", "LIGHTING CONCEPT"), [(L["name"], L.get("description", "")) for L in layers])
+        img = legend(img, design.get("title", "LIGHTING CONCEPT"), [(L["name"], L.get("description", "")) for L in layers],
+                     design.get("legend_at", "bottom-left"))
     pngmark.write(os.path.join(project, "out", out_name), img)
     with open(os.path.join(project, "out", f"positions{suffix}.csv"), "w", newline="") as fh:
         keys = ["layer", "type", "surface", "x", "y", "z", "visible", "note"]

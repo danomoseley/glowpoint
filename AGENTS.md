@@ -45,6 +45,10 @@ When the user gives a fixture (a photo, a product page, a spec sheet), reproduce
 - Suspended linear direct/indirect fixtures: `linear_pendant` (`x`, `z` lists for rows or grids, `length`, `direction`, `drop` or `y`).
 - Give each cove and slat field its own `name`. Use relationships for the areas (for example `inset(gap(...), 3)`), as for the waffle.
 
+## Task: switch on lamps that are in the drawing
+
+Table lamps, floor lamps, candles: `glow` at the lamp shade (measure the shade with `zoom` and `measure ... plane` at its height). Use `r` about 1.5 ft for a table lamp.
+
 ## Task: track lighting
 
 - Use `track` with `mounting`: `surface`, `recessed` (flush with a trim flange), `trimless` (flush, no trim), or `suspended` (on cables).
@@ -57,13 +61,14 @@ When the user gives a fixture (a photo, a product page, a spec sheet), reproduce
 1. Read `<project>/model.json` (surface and box names) and `<project>/design.json`. Before you place a light, check for existing lights at the same place; render prints a warning when two overlap.
 2. Add or edit features in `design.json`. The light types and expressions are in the README.
 3. `python3 -m glowpoint.render <project>` (add `--linework` if there is no drawing; `--camera view.json` for another view).
-4. Check `out/positions.csv` and `out/concept.png`.
+4. Check `out/positions.csv` and `out/concept.png`. If the legend covers part of the drawing, set `"legend_at"` (for example `"below"`).
 
 ## Task: set up a new image
 
 1. **Camera:** `python3 -m glowpoint.calibrate <image> --known x1,y1,x2,y2,H --out <project>/camera.json --overlay <project>/calibration.png`
    - Read the report. Each vanishing point fit should be below 0.5° for renders (1–3° for hand drawings, with `--tol 2`), and the angles between the found directions should be within 1° of 90.
    - Look at the overlay image: each color must be one real direction of the room.
+   - Give `--known` two or three times when you can. If the report says they disagree by more than 10%, find the odd one out (its line shows it) and ask the user for a real dimension if none is reliable.
    - For `--known`, use a vertical with a known height: a door frame (often 7 ft), a column edge from floor to ceiling, or a person (about 5 ft 8 in). Both pixels are on the same vertical edge (it may lean in a three-point image). Find them with `zoom`.
    - One-point images: the lens cannot be found from lines; see the README.
 2. **model.json:** start it from the skeleton in the README, with the camera from `camera.json`. You do not need a `design.json` yet.
@@ -72,7 +77,8 @@ When the user gives a fixture (a photo, a product page, a spec sheet), reproduce
    - `python3 -m glowpoint.zoom <image> X0 Y0 X1 Y1` on a box about 100–200 px wide around the corner,
    - read the pixel, confirm it with `--mark X,Y`,
    - `python3 -m glowpoint.measure <project> floor X Y` (or `height`, or `plane`).
-   Walls: two floor points on the base line. Ceiling: `height` from a floor point to the ceiling line above it. Columns: base corners and top.
+   Walls: two floor points on the base line. Ceiling: `height` from a floor point to the ceiling line above it.
+   Furniture and columns: `measure <project> box X1 Y1 X2 Y2 [X3 Y3] --top X Y --name NAME [--snap "Left wall"]` prints the box line for model.json.
    Pixels: whole numbers are pixel centres; use fractions (302.5) far away, where one pixel can be more than 0.5 ft.
    Hidden parts: find the limits from the edge that hides them, choose a value inside (usually by symmetry), and write it in the box's `"note"`.
 4. **Check:** `python3 -m glowpoint.render <project> --check`, look at `out/check.png`, and zoom on the corners with `--model <project>` (red = model edges). Compare corners in numbers with `measure <project> project X Y Z`. Fix and repeat.

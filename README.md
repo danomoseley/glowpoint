@@ -216,7 +216,7 @@ A design is a list of **layers**. Each layer has a name, a short description (fo
 
 Any value can be a number or a text expression (see [Relationships](#relationships-expressions)). If a position is a list, glowpoint makes one light for each value. If two positions are lists, it makes one light for each combination (a grid).
 
-Set `"legend": false` at the top level to leave out the legend.
+Set `"legend": false` at the top level to leave out the legend. Set `"legend_at"` to choose where it goes: `bottom-left` (default), `bottom-right`, `top-left`, `top-right`, or `below` (a white band under the drawing, so the legend covers nothing).
 
 glowpoint warns when two fixtures from different layers are at the same place (for example a pendant and a downlight above the same point).
 
@@ -224,6 +224,7 @@ glowpoint warns when two fixtures from different layers are at the same place (f
 
 | Type | What it is |
 |---|---|
+| [`glow`](#glow) | A soft glow around a point: a table lamp, floor lamp, or candle in the drawing |
 | [`downlight`](#downlight) | Round downlight symbol in a ceiling, with a beam and a pool |
 | [`sconce`](#sconce) | Wall light with a wash up and down |
 | [`uplight`](#uplight) | In-floor uplight that grazes a column face or wall |
@@ -248,6 +249,20 @@ Positions on a surface:
 | Horizontal (floor, ceiling, soffit, box top) | `x`, `z` |
 | Wall at constant X (left wall, right wall, box left/right) | `along` (= Z), `y` |
 | Wall at constant Z (back wall, box front/back) | `along` (= X), `y` |
+
+### `glow`
+A soft glow around a point: lights the surfaces nearby and shows a halo around the source. Use it to switch on the table lamps, floor lamps, or candles that are already in the drawing.
+
+```json
+{"type": "glow", "x": -12.5, "y": 2.3, "z": 5.9, "r": 1.6, "halo": 0.7}
+```
+
+| Key | Default | Meaning |
+|---|---|---|
+| `x`, `y`, `z` | | Position of the source, ft (lists make several) |
+| `r` | 2.0 | How far the light reaches on nearby surfaces, ft |
+| `strength` | 0.7 | Brightness on the surfaces, 0 to 1 |
+| `halo` | 0.6 | Size of the halo around the source, ft (0 = none) |
 
 ### `downlight`
 A round downlight in a horizontal surface.
@@ -291,7 +306,7 @@ A wall wash from the top of a wall, optionally from a slot in the ceiling.
 | `range` | | (start, end) along the wall |
 | `y_top` | top of the wall | Height where the wash starts |
 | `fade`, `strength` | 10, 0.8 | How fast the wash fades down, and how bright it is |
-| `slot` | none | `{"plane": "Left soffit", "offset": 2}` draws the slot in that ceiling, `offset` ft from the wall |
+| `slot` | none | `{"plane": "Left soffit", "offset": 2}` draws the slot in that ceiling, `offset` ft from the wall. The slot is always on the room side of the wall (the side of the drawing's camera), so the sign of `offset` does not matter |
 
 ### `pendant`
 A pendant hanging from a horizontal surface, with a glow around the shade and an optional pool.
@@ -632,7 +647,7 @@ Expressions run in a restricted Python evaluator with only these names (and Pyth
 python3 -m glowpoint.calibrate projects/new/drawing.png --known 640,520,640,388,10
 ```
 
-The tool finds the straight lines, groups them by vanishing point, and calculates the camera. `--known x1,y1,x2,y2,H` gives the scale: pixel (x1, y1) is on the floor, pixel (x2, y2) is on the same vertical edge, and they are H feet apart (a door frame, a column edge from floor to ceiling, a person). In a three-point image vertical edges lean; follow the edge. Or give `--eye-height`.
+The tool finds the straight lines, groups them by vanishing point, and calculates the camera. `--known x1,y1,x2,y2,H` gives the scale (give it two or three times to check it, see below): pixel (x1, y1) is on the floor, pixel (x2, y2) is on the same vertical edge, and they are H feet apart (a door frame, a column edge from floor to ceiling, a person). In a three-point image vertical edges lean; follow the edge. Or give `--eye-height`.
 
 It prints a report and writes `camera.json` (paste it into `model.json` as `"camera"`) and `calibration.png` (each group of lines in one color):
 
@@ -650,7 +665,7 @@ Options:
 
 | Option | Use |
 |---|---|
-| `--known x1,y1,x2,y2,H` | Scale from one known vertical |
+| `--known x1,y1,x2,y2,H` | Scale from a known vertical. Give it several times: the tool prints the eye height from each, how much they disagree, and uses the median |
 | `--eye-height FT` | Scale from a known eye height |
 | `--f PX` | Lens in pixels, if known (necessary for one-point images) |
 | `--tol DEG` | How far a line can be from its vanishing point (default 1; hand drawings 2) |
@@ -661,6 +676,7 @@ How to read it:
 
 - **fit** — how well the lines meet at each vanishing point. Renders: below 0.5°. Hand drawings: 1° to 3° (use `--tol 2`).
 - **angles between the found directions** — the room's main directions must be 90° apart. More than 1° from 90 means a wrong line group or a non-square room. Look at `calibration.png`.
+- **known dimensions disagree by** — with several `--known`, more than 10% means a wrong pixel, a wrong dimension, or an inexact drawing. The line for each one shows which is the odd one out. Hand sketches often disagree by 10–25%: choose the dimension you trust most, for example the ceiling height.
 - **one-point** images: the lens cannot be found from lines alone. Give `--f`, or calculate it from something square (see below).
 
 The world frame: the origin is on the floor below the camera, Y is up, Z is the room direction most in front of the camera, and X is to its right.
@@ -704,6 +720,20 @@ python3 -m glowpoint.measure projects/new project -22.85 0 52.16 # the pixel of 
 ```
 
 `height` measures along the true vertical, also when vertical edges lean in a three-point image.
+
+**Boxes in one step.** `box` makes a model box from the base corners that you can see and one top pixel straight above the first corner, and prints a line for `model.json`:
+
+```bash
+python3 -m glowpoint.measure projects/new box 161 417 234 397 132 400 --top 161 348 --name "Nightstand L" --snap "Left wall"
+# {"name": "Nightstand L", "kind": "object", "X": [-13.05, -10.71], "Y": [0, 1.61], "Z": [5.04, 7.05]}
+```
+
+| Option | Use |
+|---|---|
+| `--top X Y` | A top pixel straight above the first corner (necessary) |
+| `--name`, `--kind` | Name and kind of the box (`object` or `column`) |
+| `--depth FT`, `--toward wall\|camera` | With only 2 corners (one side visible): the size and direction of the hidden side |
+| `--snap "Left wall"` | Move the box's nearest side onto that wall (for furniture against a wall) |
 
 Typical steps:
 
