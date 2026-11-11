@@ -6,6 +6,10 @@ You start with a perspective image of a space: a render from 3D software or a ha
 
 The output is diagrammatic, not photorealistic. It shows **what is lit and where the light comes from**, for a design review with the architect.
 
+![The lobby example, drawn as linework from its model](docs/lobby-linework.png)
+
+*The lobby example from `projects/lobby`, drawn as linework from its model. With the architect's drawing in the project folder, the same lights are drawn on the drawing.*
+
 ---
 
 ## Contents
@@ -42,8 +46,15 @@ The only dependencies are `numpy` and `opencv-python`. It runs on Linux, macOS, 
 
 ## Quick start
 
+The lobby example runs without its drawing (the drawing is not in this repository). `--linework` draws the model itself:
+
 ```bash
-# put the architect's drawing in the project folder first (see "Project folder")
+python3 -m glowpoint.render projects/lobby --linework
+```
+
+With your own drawing in the project folder, draw the lights on the drawing, and make the check image too:
+
+```bash
 python3 -m glowpoint.render projects/lobby --check
 ```
 
@@ -51,11 +62,19 @@ This writes:
 
 | File | What it is |
 |---|---|
-| `projects/lobby/out/concept.png` | The drawing with the lighting and a legend |
+| `projects/lobby/out/concept.png` | The drawing (or linework) with the lighting and a legend |
 | `projects/lobby/out/check.png` | The 3D model on the drawing, with a 4 ft grid on each surface |
 | `projects/lobby/out/positions.csv` | Every light: layer, type, surface, X/Y/Z in feet |
 
 To change the lighting, edit `design.json` and run the same command again.
+
+| Option | Use |
+|---|---|
+| `--check` | Also write `out/check.png` |
+| `--linework` | Draw the model as linework instead of using the drawing |
+| `--camera view.json` | Render from another camera (see below) |
+| `--design file.json` | Use another design file, for example an option B |
+| `--out name.png` | Name of the output image in `out/` |
 
 To see the same design from another position (for example from a doorway), give a camera. The model is drawn as linework, because the architect's image only fits its own camera:
 
@@ -75,7 +94,7 @@ python3 -m glowpoint.render projects/lobby --camera door.json --out door.png
 4. **Design.** Each light is placed on a named surface. Its position is a relationship to the model ("centered between Column L1 and Column R1"), not a fixed number. When the model changes, the lights follow.
 5. **Drawing.** Light is drawn as a soft warm glow over the original linework, so the architect's drawing stays readable.
 
-Coordinates: **X** to the right, **Y** up (floor = 0), **Z** away from the viewer, in feet. The camera stands at X = 0, Z = 0.
+Coordinates: **X** to the right, **Y** up (floor = 0), **Z** into the image, in feet. The drawing's camera usually stands at X = 0, Z = 0.
 
 ## Project folder
 
@@ -87,9 +106,9 @@ projects/lobby/
   out/           output images and positions.csv (made by the render command)
 ```
 
-One folder for each drawing. To start a new project, copy a folder, replace the drawing, and set up the model (see [Setting up a new drawing](#setting-up-a-new-drawing)).
+One folder for each drawing. To start a new project, make a new folder with the drawing, then follow [Setting up a new drawing](#setting-up-a-new-drawing). Keep your projects outside this repository or in `local/` (see [Working without merge conflicts](#working-without-merge-conflicts)).
 
-> **Drawings are not in this repository.** The architects' drawings belong to the architects or their clients. `.gitignore` excludes `projects/*/drawing.*` and `projects/*/out/`. Add your own drawing to the project folder to run the example.
+> **Drawings are not in this repository.** The architects' drawings belong to the architects or their clients. `.gitignore` excludes `projects/*/drawing.*` and `projects/*/out/`. The lobby example runs with `--linework`.
 
 ## model.json: the 3D model
 
@@ -137,7 +156,7 @@ The camera has two forms.
 | `surfaces[].X/Y/Z` | Size of the surface on the other two axes |
 | `boxes[]` | Columns and objects. `kind` is `column` or `object` |
 
-Each box makes five surfaces, named `"<name> front"`, `"back"`, `"left"`, `"right"`, and `"top"`. The front faces the viewer. Objects (like the desk) are not drawn, because the drawing already shows them. They hide light that is behind them, and lights can refer to them.
+Each box makes five surfaces, named `"<name> front"`, `"back"`, `"left"`, `"right"`, and `"top"`. Front is the side at the low Z end (toward the drawing's camera), left is the low X side. Objects (like the desk) are not drawn, because the drawing already shows them. They hide light that is behind them, and lights can refer to them.
 
 ## design.json: the lighting design
 
@@ -266,6 +285,8 @@ Expressions run in a restricted Python evaluator with only these names. Plain na
 - **check.png** (with `--check`) — every surface tinted and named, with a 4 ft grid. If the grid follows the lines of the drawing, the model is correct.
 - **positions.csv** — one row for each light: layer, type, surface, X/Y/Z (ft), and whether it is visible. Use it to check the design and to give positions to others.
 
+`visible_faces()` always means visible in the drawing's own camera, also when you render another view. Thus a design is the same in all views.
+
 ## Setting up a new drawing
 
 ### 1. Find the camera
@@ -288,6 +309,17 @@ It prints a report and writes `camera.json` (paste it into `model.json` as `"cam
   angles between the found directions (90 = perfect): 90.00, 90.00, 90.00
 ```
 
+Options:
+
+| Option | Use |
+|---|---|
+| `--known x1,y1,x2,y2,H` | Scale from one known vertical |
+| `--eye-height FT` | Scale from a known eye height |
+| `--f PX` | Lens in pixels, if known (necessary for one-point images) |
+| `--tol DEG` | How far a line can be from its vanishing point (default 1; hand drawings 2) |
+| `--out FILE` | Camera file to write (default `camera.json`) |
+| `--overlay FILE` | Line-group image to write (default `calibration.png`) |
+
 How to read it:
 
 - **fit** — how well the lines meet at each vanishing point. Renders: below 0.5°. Hand drawings: 1° to 3° (use `--tol 2`).
@@ -296,9 +328,24 @@ How to read it:
 
 The world frame: the origin is on the floor below the camera, Y is up, Z is the room direction most in front of the camera, and X is to its right.
 
-### 2. Build the surfaces
+### 2. Start model.json
 
-Measure the room in feet with the measure tool, then write the surfaces and boxes in `model.json`:
+Make `model.json` in the project folder with the camera from step 1:
+
+```json
+{
+  "drawing": "drawing.png",
+  "units": "ft",
+  "camera": {"f": 651.3, "principal": [526.8, 350.3], "position": [0, 5.5, 0], "yaw": 25.1, "pitch": 12.0, "roll": 0.0},
+  "calibration": "Scale from the door frame at 7 ft.",
+  "surfaces": [],
+  "boxes": []
+}
+```
+
+### 3. Build the surfaces
+
+Measure the room in feet with the measure tool, then add the surfaces and boxes to `model.json`. The tool reads the camera from `model.json` (or give it `camera.json` instead of the project folder):
 
 ```bash
 python3 -m glowpoint.measure projects/new floor 302 444          # floor point:  X -22.85  Z 52.16
@@ -306,9 +353,16 @@ python3 -m glowpoint.measure projects/new height 203 492 203 441 # height above 
 python3 -m glowpoint.measure projects/new plane 760 182 Y 24.36  # point on the plane Y = 24.36 (a ceiling)
 ```
 
-Typical steps: the floor; a wall from two points on its base line; the ceiling height from a column joint or a wall top; each column from its base corners and its height.
+Typical steps:
 
-### 3. Check
+1. **Floor:** `floor` on the far corners that you can see. Make the floor surface a little larger than the room.
+2. **Walls:** `floor` on two points of each wall's base line. A wall along Z has the same X at both points; that X is its `at`.
+3. **Ceiling:** `height` from a floor point to the ceiling line straight above it.
+4. **Columns and objects:** `floor` on the base corners, `height` for the top. Add each one as a box.
+
+Name surfaces and boxes clearly (`Left wall`, `Column L1`, `Desk`). The design refers to these names.
+
+### 4. Check
 
 Run `python3 -m glowpoint.render projects/new --check` and look at `out/check.png`. Each surface must follow the lines of the image. If one does not, measure it again.
 
@@ -348,7 +402,7 @@ Inside a light function, the canvas gives you:
 | Name | Use |
 |---|---|
 | `cv.m` | The model: `surface(name)`, `to3d(surface, u, v)`, `project(points)`, `boxes` |
-| `cv.ids`, `cv.P`, `cv.dep` | For each pixel: surface index, 3D point, depth |
+| `cv.ids`, `cv.P`, `cv.dep` | For each pixel: surface index, 3D point, depth along the camera's forward direction |
 | `cv.glow(mask, strength)` | Add warm light to pixels (strength 0 to 1 per pixel) |
 | `cv.seg(A, B, width)` | Draw a 3D line, hidden where something is in front |
 | `cv.visible(points, pixels)` | True for each 3D point that is not hidden |
@@ -396,17 +450,20 @@ glowpoint is designed so that an agent can take a request in plain words and pla
 - **For a new kind of light, write a plugin** in `<project>/types/` (start from `examples/types/pendant.py`). Do not change `glowpoint/` for one project.
 - **Keep user projects out of the repo.** Put them in `local/` or outside the clone.
 - **Set up a new image with the tools:** `glowpoint.calibrate` for the camera, `glowpoint.measure` for every surface. Do not estimate positions by eye.
-- **Coordinates:** X right, Y up, Z away from the viewer, feet. Horizontal surfaces use (x, z). Walls use (along, y).
+- **Coordinates:** X right, Y up, Z into the image, feet. Horizontal surfaces use (x, z). Walls use (along, y).
+- **Run the tests** after a code change: `python3 tests/test_calibrate.py`, and render the lobby with `--linework` to see that it still works.
 
 Typical request to design file:
 
-> "Two rows of downlights along the column lines, one between each pair of columns."
+> "A downlight on each column line, halfway between the first and the second columns."
 
 ```json
 {"type": "downlight", "plane": "Ceiling",
  "x": ["box('Column L1').xc", "box('Column R1').xc"],
- "z": ["centre_line('Column L1', 'Column L2', 'Z')"]}
+ "z": "centre_line('Column L1', 'Column L2', 'Z')"}
 ```
+
+Two values for `x` and one for `z` make two lights.
 
 ## Limits
 

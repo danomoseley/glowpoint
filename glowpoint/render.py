@@ -8,7 +8,7 @@ Writes  <project>/out/concept.png    the drawing with the lighting
 
 Other views:  --camera view.json   use a different camera (see model.json "camera"); the model is drawn
                                    as linework because the architect's drawing only fits its own camera
-              --linework           draw the model as linework even with the original camera
+              --linework           draw the model as linework with the original camera (no drawing needed)
 """
 import argparse, csv, json, os
 import numpy as np
@@ -76,14 +76,16 @@ def render(project, check=False, out_name="concept.png", design_file="design.jso
            size=None):
     m = Model(project)
     design = json.load(open(os.path.join(project, design_file)))
-    base = None if (camera or linework) else cv2.imread(m.drawing)
+    has_drawing = os.path.exists(m.drawing)
+    base = None if (camera or linework or not has_drawing) else cv2.imread(m.drawing)
+    if base is None and not (camera or linework):
+        raise FileNotFoundError(f"{m.drawing} not found. Add the drawing, or use --linework to draw the model.")
     # "visible" in the design always means visible in the architect's drawing, whatever view is rendered
-    ref = cv2.imread(m.drawing); ref_shape = ref.shape[:2] if ref is not None else (700, 1050)
+    ref = cv2.imread(m.drawing) if has_drawing else None; ref_shape = ref.shape[:2] if ref is not None else (700, 1050)
     ref_ids = m.raycast(ref_shape)[0]
     if camera:
         m.set_camera(camera)
     if base is None:
-        if not (camera or linework): raise FileNotFoundError(m.drawing)
         shape = tuple(size) if size else ref_shape
         base = LW.draw(m, shape)
     os.makedirs(os.path.join(project, "out"), exist_ok=True)
