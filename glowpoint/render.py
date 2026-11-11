@@ -72,10 +72,37 @@ def check_image(m, base, step=4.0):
     return out
 
 
+POINT_TYPES = ("downlight", "pendant", "sconce", "uplight")
+
+
+def warn_overlaps(report, tol=0.5):
+    """Warn when two fixtures from different features are at (almost) the same place."""
+    pts = [(i, r) for i, r in enumerate(report) if r["type"] in POINT_TYPES]
+    seen = set()
+    for a in range(len(pts)):
+        for b in range(a+1, len(pts)):
+            (i, r1), (j, r2) = pts[a], pts[b]
+            if r1["layer"] == r2["layer"] and r1["type"] == r2["type"]: continue
+            if abs(r1["x"]-r2["x"]) < tol and abs(r1["z"]-r2["z"]) < tol and \
+               (r1["type"] in ("downlight", "pendant")) == (r2["type"] in ("downlight", "pendant")):
+                key = (r1["layer"], r1["type"], r2["layer"], r2["type"])
+                if key in seen: continue
+                seen.add(key)
+                print(f"warning: {r1['type']} ({r1['layer']}) and {r2['type']} ({r2['layer']}) are at the same place, "
+                      f"x {r1['x']}, z {r1['z']} (and maybe more)")
+
+
 def render(project, check=False, out_name="concept.png", design_file="design.json", camera=None, linework=False,
            size=None):
     m = Model(project)
-    design = json.load(open(os.path.join(project, design_file)))
+    dpath = os.path.join(project, design_file)
+    if os.path.exists(dpath):
+        design = json.load(open(dpath))
+    elif design_file == "design.json":
+        design = {"layers": [], "legend": False}          # new project: check the model before any design
+        print(f"note: {dpath} not found; rendering the model with no lights")
+    else:
+        raise FileNotFoundError(dpath)
     has_drawing = os.path.exists(m.drawing)
     base = None if (camera or linework or not has_drawing) else cv2.imread(m.drawing)
     if base is None and not (camera or linework):
@@ -89,8 +116,10 @@ def render(project, check=False, out_name="concept.png", design_file="design.jso
         shape = tuple(size) if size else ref_shape
         base = LW.draw(m, shape)
     os.makedirs(os.path.join(project, "out"), exist_ok=True)
+    stem = os.path.splitext(out_name)[0]
+    suffix = "" if out_name == "concept.png" else "_" + stem       # each view keeps its own check and positions files
     if check:
-        cv2.imwrite(os.path.join(project, "out", "check.png"), check_image(m, base))
+        cv2.imwrite(os.path.join(project, "out", f"check{suffix}.png"), check_image(m, base))
 
     layers = design["layers"]
     lights, geometry, helper_factories, loaded = plugins.load(project, F.LIGHTS, GEOMETRY)
@@ -118,11 +147,12 @@ def render(project, check=False, out_name="concept.png", design_file="design.jso
                 raise ValueError(f"Unknown type '{f['type']}'. Known: {sorted(lights) + sorted(geometry)}. "
                                  f"Add new types in {project}/types/ or a GLOWPOINT_TYPES folder.")
             lights[f["type"]](cv, fe)
+    warn_overlaps(cv.report)
     img = cv.finish()
     if design.get("legend", True):
         img = legend(img, design.get("title", "LIGHTING CONCEPT"), [(L["name"], L.get("description", "")) for L in layers])
     cv2.imwrite(os.path.join(project, "out", out_name), img)
-    with open(os.path.join(project, "out", "positions.csv"), "w", newline="") as fh:
+    with open(os.path.join(project, "out", f"positions{suffix}.csv"), "w", newline="") as fh:
         keys = ["layer", "type", "surface", "x", "y", "z", "visible", "note"]
         w = csv.DictWriter(fh, fieldnames=keys, extrasaction="ignore"); w.writeheader()
         for r in cv.report: w.writerow(r)
@@ -133,7 +163,8 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("project"); ap.add_argument("--check", action="store_true", help="also write out/check.png")
     ap.add_argument("--design", default="design.json"); ap.add_argument("--out", default="concept.png")
-    ap.add_argument("--camera", help="JSON file with a camera, for a new view")
+    ap.add_argument("--camera", help="JSON file with a camera, for a new view (path from the current folder). "
+                    "Outputs are named after --out: check_<out>.png, positions_<out>.csv")
     ap.add_argument("--linework", action="store_true", help="draw the model as linework, not on the drawing")
     a = ap.parse_args()
     cam = json.load(open(a.camera)) if a.camera else None

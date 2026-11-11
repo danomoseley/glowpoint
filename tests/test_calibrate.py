@@ -3,7 +3,7 @@
 Renders the lobby model as linework from known cameras (one-, two- and three-point), runs the camera
 setup on each image, and compares the result with the true camera.
 
-  python3 tests/test_calibrate.py            (needs projects/lobby/model.json; the drawing is not needed)
+  python3 tests/test_calibrate.py            (uses tests/fixtures/lobby/model.json)
 """
 import os, sys, tempfile
 import numpy as np
@@ -13,7 +13,7 @@ from glowpoint.model import Model
 from glowpoint import linework, calibrate as CAL
 from glowpoint.measure import Cam
 
-PROJECT = os.path.join(os.path.dirname(__file__), "..", "projects", "lobby")
+PROJECT = os.path.join(os.path.dirname(__file__), "fixtures", "lobby")
 CAMERAS = {
     "two-point, turned 30 deg":         dict(f=700, principal=[525, 350], position=[-12, 5.5, 18], yaw=30, pitch=0, roll=0),
     "two-point, turned -40 deg":        dict(f=600, principal=[525, 350], position=[30, 5.5, 22], yaw=-40, pitch=0, roll=0),

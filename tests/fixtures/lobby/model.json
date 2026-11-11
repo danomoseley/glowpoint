@@ -1,0 +1,189 @@
+{
+ "drawing": "drawing.png",
+ "units": "ft",
+ "camera": {
+  "vp": [
+   543,
+   345
+  ],
+  "f": 550,
+  "eye_height": 9.388
+ },
+ "calibration": "One-point perspective. Scale from people at 5 ft 8 in. X right, Y up (floor = 0), Z away from the viewer.",
+ "surfaces": [
+  {
+   "name": "Floor",
+   "axis": "Y",
+   "at": 0.0,
+   "X": [
+    -25.373,
+    38.567
+   ],
+   "Z": [
+    5.075,
+    111.642
+   ]
+  },
+  {
+   "name": "Ceiling",
+   "axis": "Y",
+   "at": 24.358,
+   "X": [
+    -16.746,
+    38.567
+   ],
+   "Z": [
+    5.075,
+    111.642
+   ]
+  },
+  {
+   "name": "Left soffit",
+   "axis": "Y",
+   "at": 20.806,
+   "X": [
+    -25.373,
+    -16.746
+   ],
+   "Z": [
+    5.075,
+    111.642
+   ]
+  },
+  {
+   "name": "Soffit step",
+   "axis": "X",
+   "at": -16.746,
+   "Y": [
+    20.806,
+    24.358
+   ],
+   "Z": [
+    5.075,
+    111.642
+   ]
+  },
+  {
+   "name": "Left wall",
+   "axis": "X",
+   "at": -25.373,
+   "Y": [
+    0.0,
+    20.806
+   ],
+   "Z": [
+    5.075,
+    111.642
+   ]
+  },
+  {
+   "name": "Right wall",
+   "axis": "X",
+   "at": 38.567,
+   "Y": [
+    0.0,
+    24.358
+   ],
+   "Z": [
+    5.075,
+    111.642
+   ]
+  },
+  {
+   "name": "Back wall",
+   "axis": "Z",
+   "at": 111.642,
+   "X": [
+    -25.373,
+    38.567
+   ],
+   "Y": [
+    0.0,
+    24.358
+   ]
+  }
+ ],
+ "boxes": [
+  {
+   "name": "Column L1",
+   "kind": "column",
+   "X": [
+    -14.818,
+    -8.322
+   ],
+   "Y": [
+    0,
+    24.358
+   ],
+   "Z": [
+    50.645,
+    57.14
+   ]
+  },
+  {
+   "name": "Column R1",
+   "kind": "column",
+   "X": [
+    21.009,
+    28.012
+   ],
+   "Y": [
+    0,
+    24.358
+   ],
+   "Z": [
+    53.182,
+    60.185
+   ]
+  },
+  {
+   "name": "Column L2",
+   "kind": "column",
+   "X": [
+    -14.818,
+    -8.322
+   ],
+   "Y": [
+    0,
+    24.358
+   ],
+   "Z": [
+    86.066,
+    92.561
+   ]
+  },
+  {
+   "name": "Column R2",
+   "kind": "column",
+   "X": [
+    24.399,
+    33.604
+   ],
+   "Y": [
+    0,
+    24.358
+   ],
+   "Z": [
+    93.901,
+    100.995
+   ]
+  },
+  {
+   "name": "Desk",
+   "kind": "object",
+   "X": [
+    -24.8,
+    -22.3
+   ],
+   "Y": [
+    0,
+    3.26
+   ],
+   "Z": [
+    35.13,
+    52.16
+   ],
+   "note": "Reception desk, measured from the drawing. Not drawn; used for references and to hide light behind it."
+  }
+ ]
+}

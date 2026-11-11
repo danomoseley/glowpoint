@@ -72,19 +72,23 @@ To change the lighting, edit `design.json` and run the same command again.
 |---|---|
 | `--check` | Also write `out/check.png` |
 | `--linework` | Draw the model as linework instead of using the drawing |
-| `--camera view.json` | Render from another camera (see below) |
+| `--camera view.json` | Render from another camera (see below). The path is from the current folder |
 | `--design file.json` | Use another design file, for example an option B |
-| `--out name.png` | Name of the output image in `out/` |
+| `--out name.png` | Name of the output image in `out/`. With any name other than `concept.png`, the other outputs get the same name: `check_name.png`, `positions_name.csv` |
 
-To see the same design from another position (for example from a doorway), give a camera. The model is drawn as linework, because the architect's image only fits its own camera:
+A project without `design.json` renders the model with no lights. Use this to check a new model before you design.
+
+To see the same design from another position, give a camera. The model is drawn as linework, because the architect's image only fits its own camera. This camera stands in the lobby's left doorway, at eye height, and looks toward the far end of the hall:
 
 ```bash
 python3 -m glowpoint.render projects/lobby --camera door.json --out door.png
 ```
 
 ```json
-{"f": 626, "principal": [525, 350], "position": [-24.4, 5.5, 31.0], "yaw": 65, "pitch": 0, "roll": 0}
+{"f": 626, "principal": [525, 350], "position": [-24.4, 5.5, 31.0], "yaw": 20, "pitch": 0, "roll": 0}
 ```
+
+`position` is in model feet. `yaw` 0 looks along +Z (into the original drawing), 90 looks along +X (to the right). `f` is the lens in pixels: for an image 1050 px wide, 626 px is an 80° field of view.
 
 ## How it works
 
@@ -107,6 +111,8 @@ projects/lobby/
 ```
 
 One folder for each drawing. To start a new project, make a new folder with the drawing, then follow [Setting up a new drawing](#setting-up-a-new-drawing). Keep your projects outside this repository or in `local/` (see [Working without merge conflicts](#working-without-merge-conflicts)).
+
+To experiment with the lobby example, copy it first: `cp -r projects/lobby local/lobby`. The tests use their own copy in `tests/fixtures/`, so the example can change without breaking them, but a copy keeps the repository clean.
 
 > **Drawings are not in this repository.** The architects' drawings belong to the architects or their clients. `.gitignore` excludes `projects/*/drawing.*` and `projects/*/out/`. The lobby example runs with `--linework`.
 
@@ -156,7 +162,9 @@ The camera has two forms.
 | `surfaces[].X/Y/Z` | Size of the surface on the other two axes |
 | `boxes[]` | Columns and objects. `kind` is `column` or `object` |
 
-Each box makes five surfaces, named `"<name> front"`, `"back"`, `"left"`, `"right"`, and `"top"`. Front is the side at the low Z end (toward the drawing's camera), left is the low X side. Objects (like the desk) are not drawn, because the drawing already shows them. They hide light that is behind them, and lights can refer to them.
+Each box makes five surfaces, named `"<name> front"`, `"back"`, `"left"`, `"right"`, and `"top"`. Front is the side at the low Z end (toward the drawing's camera), left is the low X side. On the drawing, objects (like the desk) are not drawn, because the drawing already shows them. In linework, check images, and other camera views they are drawn as boxes. They always hide light that is behind them, and lights can refer to them.
+
+Surfaces and boxes can have a `"note"` field. Use it to record how a value was found or what was assumed, for example a hidden end of an object.
 
 ## design.json: the lighting design
 
@@ -185,6 +193,8 @@ A design is a list of **layers**. Each layer has a name, a short description (fo
 Any value can be a number or a text expression (see [Relationships](#relationships-expressions)). If a position is a list, glowpoint makes one light for each value. If two positions are lists, it makes one light for each combination (a grid).
 
 Set `"legend": false` at the top level to leave out the legend.
+
+glowpoint warns when two fixtures from different layers are at the same place (for example a pendant and a downlight above the same point).
 
 ## Light and ceiling types
 
@@ -240,6 +250,19 @@ A wall wash from the top of a wall, optionally from a slot in the ceiling.
 | `fade`, `strength` | 10, 0.8 | How fast the wash fades down, and how bright it is |
 | `slot` | none | `{"plane": "Left soffit", "offset": 2}` draws the slot in that ceiling, `offset` ft from the wall |
 
+### `pendant`
+A pendant hanging from a horizontal surface, with a glow around the shade and an optional pool.
+
+| Key | Default | Meaning |
+|---|---|---|
+| `plane` | | Surface it hangs from |
+| `x`, `z` | | Position(s) |
+| `y` | | Height of the bottom of the shade above the floor, ft. Use this for "3 ft above the desk": `"box('Desk').top + 3"` |
+| `drop` | 10 | If there is no `y`: distance from the surface to the bottom of the shade, ft |
+| `d`, `h` | 1.5, 0.6 | Shade diameter and height, ft |
+| `pool_r` | 0 | Radius of a light pool, ft (0 = none) |
+| `beam_to` | 0 | Height of the pool (0 = floor) |
+
 ### `waffle`
 A waffle-slab ceiling of square coffers. It changes the model, so lights hide correctly inside the coffers.
 
@@ -283,7 +306,7 @@ Expressions run in a restricted Python evaluator with only these names. Plain na
 
 - **concept.png** — the drawing with the lighting and a legend made from the layer names and descriptions.
 - **check.png** (with `--check`) — every surface tinted and named, with a 4 ft grid. If the grid follows the lines of the drawing, the model is correct.
-- **positions.csv** — one row for each light: layer, type, surface, X/Y/Z (ft), and whether it is visible. Use it to check the design and to give positions to others.
+- **positions.csv** — one row for each light: layer, type, surface, X/Y/Z (ft), and `visible`. Use it to check the design and to give positions to others. `visible` is about the fixture point itself: an uplight hidden behind a bench is `False`, although the column face that it lights can be in view.
 
 `visible_faces()` always means visible in the drawing's own camera, also when you render another view. Thus a design is the same in all views.
 
@@ -295,7 +318,7 @@ Expressions run in a restricted Python evaluator with only these names. Plain na
 python3 -m glowpoint.calibrate projects/new/drawing.png --known 640,520,640,388,10
 ```
 
-The tool finds the straight lines, groups them by vanishing point, and calculates the camera. `--known x1,y1,x2,y2,H` gives the scale: pixel (x1, y1) is on the floor, pixel (x2, y2) is straight above it, and they are H feet apart (a door frame, a column joint, a person). Or give `--eye-height`.
+The tool finds the straight lines, groups them by vanishing point, and calculates the camera. `--known x1,y1,x2,y2,H` gives the scale: pixel (x1, y1) is on the floor, pixel (x2, y2) is on the same vertical edge, and they are H feet apart (a door frame, a column edge from floor to ceiling, a person). In a three-point image vertical edges lean; follow the edge. Or give `--eye-height`.
 
 It prints a report and writes `camera.json` (paste it into `model.json` as `"camera"`) and `calibration.png` (each group of lines in one color):
 
@@ -345,13 +368,16 @@ Make `model.json` in the project folder with the camera from step 1:
 
 ### 3. Build the surfaces
 
-To find exact pixel positions, use the zoom tool. It makes an enlarged image with the original pixel coordinates on a grid:
+To find exact pixel positions, use the zoom tool. It makes an enlarged image with the original pixel coordinates on a grid, and writes it to `out/zoom.png` next to the image (or `--out`):
 
 ```bash
 python3 -m glowpoint.zoom projects/new/drawing.png                       # whole image, coarse grid
 python3 -m glowpoint.zoom projects/new/drawing.png 150 390 330 500       # zoom on a box (X0 Y0 X1 Y1)
 python3 -m glowpoint.zoom projects/new/drawing.png 150 390 330 500 --mark 302,444   # confirm a point
+python3 -m glowpoint.zoom projects/new/drawing.png 650 160 860 460 --model projects/new  # model edges in red
 ```
+
+Pixels: a whole number is the centre of a pixel, and the grid lines go through pixel centres. Fractions such as 302.5 are allowed in all tools. Far from the camera one pixel can be more than half a foot, so use fractions there.
 
 Then measure the room in feet with the measure tool, then add the surfaces and boxes to `model.json`. The tool reads the camera from `model.json` (or give it `camera.json` instead of the project folder):
 
@@ -359,7 +385,11 @@ Then measure the room in feet with the measure tool, then add the surfaces and b
 python3 -m glowpoint.measure projects/new floor 302 444          # floor point:  X -22.85  Z 52.16
 python3 -m glowpoint.measure projects/new height 203 492 203 441 # height above a floor point: 3.26 ft
 python3 -m glowpoint.measure projects/new plane 760 182 Y 24.36  # point on the plane Y = 24.36 (a ceiling)
+python3 -m glowpoint.measure projects/new plane 120 300 X -25.37 # point on the wall X = -25.37
+python3 -m glowpoint.measure projects/new project -22.85 0 52.16 # the pixel of a 3D point: check a corner
 ```
+
+`height` measures along the true vertical, also when vertical edges lean in a three-point image.
 
 Typical steps:
 
@@ -370,9 +400,11 @@ Typical steps:
 
 Name surfaces and boxes clearly (`Left wall`, `Column L1`, `Desk`). The design refers to these names.
 
+**Hidden parts.** When part of an object is hidden (for example one end of a bench behind a column), find its limits from what you can see: the hidden end must be behind the edge that hides it (use `plane` at that edge). Then choose a value inside the limits, usually by symmetry, and write the assumption in the box's `note`. Do not model objects that are fully hidden.
+
 ### 4. Check
 
-Run `python3 -m glowpoint.render projects/new --check` and look at `out/check.png`. Each surface must follow the lines of the image. If one does not, measure it again.
+Run `python3 -m glowpoint.render projects/new --check` and look at `out/check.png`. Each surface must follow the lines of the image. For a close check, zoom with `--model projects/new`: every red model edge must lie on a line of the image. Use `measure ... project X Y Z` to compare corners in numbers. If a surface is off, measure it again.
 
 ### One-point images and hand drawings
 
@@ -382,7 +414,7 @@ Hand drawings are not exact. Match the model to the drawing, not to an ideal gri
 
 ### Tests
 
-`python3 tests/test_render.py` draws the lobby example and compares it with a reference image (`--update` accepts an intended change).
+`python3 tests/test_render.py` draws the lobby test fixture (`tests/fixtures/lobby`) and compares it with a reference image (`--update` accepts an intended change).
 
 `python3 tests/test_calibrate.py` renders the lobby model from known cameras (two- and three-point, with tilt and roll), runs the setup on each image, and compares the result with the true camera. Current results: lens within 0.3 %, angles within 0.15°, scale within 1 %.
 
@@ -398,24 +430,25 @@ A later file can replace a type with the same name, so a project can change an o
 A plugin can define any of these:
 
 ```python
-LIGHTS = {"pendant": pendant}            # function(canvas, feature)
+LIGHTS = {"linear_strip": linear_strip}  # function(canvas, feature)
 GEOMETRY = {"vault": (prepare, draw)}    # prepare(model, feature) before ray casting,
                                          # draw(canvas, feature, base_image) -> new base image
 def helpers(model):                      # extra names for design.json expressions
     return {"between": lambda a, b: ...}
 ```
 
-[`examples/types/pendant.py`](examples/types/pendant.py) is a complete example: a pendant light and a `between('Column L1', 'Column R1')` helper. Copy it to start a new type.
+[`examples/types/linear_strip.py`](examples/types/linear_strip.py) is a complete example: a linear LED strip on any surface, and a `between('Column L1', 'Column R1')` helper. Copy it to start a new type.
 
 Inside a light function, the canvas gives you:
 
 | Name | Use |
 |---|---|
-| `cv.m` | The model: `surface(name)`, `to3d(surface, u, v)`, `project(points)`, `boxes` |
+| `cv.m` | The model: `surface(name)`, `to3d(surface, u, v)`, `project(points)`, `depth(points)`, `boxes` |
 | `cv.ids`, `cv.P`, `cv.dep` | For each pixel: surface index, 3D point, depth along the camera's forward direction |
 | `cv.glow(mask, strength)` | Add warm light to pixels (strength 0 to 1 per pixel) |
 | `cv.seg(A, B, width)` | Draw a 3D line, hidden where something is in front |
 | `cv.visible(points, pixels)` | True for each 3D point that is not hidden |
+| `cv.sid(name)` | Index of a surface in `cv.ids` |
 | `cv.img`, `cv.over` | The linework image and the light image (OpenCV BGR arrays) |
 | `cv.add(feature, type, surface, point, ...)` | Add a row to positions.csv |
 
@@ -457,7 +490,7 @@ glowpoint is designed so that an agent can take a request in plain words and pla
 - **Verify with positions.csv.** After a render, read the CSV and confirm the numbers that the user asked for (spacing, distances, counts). Look at `concept.png` too.
 - **State your assumptions.** When a request leaves out a size (aperture, rib width, height), choose a normal value and tell the user which value you chose.
 - **Only edit `design.json` for design changes** and `model.json` for geometry changes. Keep the code generic.
-- **For a new kind of light, write a plugin** in `<project>/types/` (start from `examples/types/pendant.py`). Do not change `glowpoint/` for one project.
+- **For a new kind of light, write a plugin** in `<project>/types/` (start from `examples/types/linear_strip.py`). Do not change `glowpoint/` for one project.
 - **Keep user projects out of the repo.** Put them in `local/` or outside the clone.
 - **Set up a new image with the tools:** `glowpoint.calibrate` for the camera, `glowpoint.zoom` to read pixels, `glowpoint.measure` for every surface. Do not estimate positions by eye.
 - **Coordinates:** X right, Y up, Z into the image, feet. Horizontal surfaces use (x, z). Walls use (along, y).

@@ -1,4 +1,4 @@
-"""Render test: draws the lobby example as linework and compares it with tests/reference/lobby_linework.png.
+"""Render test: draws the lobby test fixture (tests/fixtures/lobby) as linework and compares it with tests/reference/lobby_linework.png.
 
   python3 tests/test_render.py            check
   python3 tests/test_render.py --update   accept the current result as the new reference (after an intended change)
@@ -19,7 +19,7 @@ EXPECTED_ITEMS = 29
 def main(update=False):
     tmp = tempfile.mkdtemp(prefix="glowpoint_render_")
     proj = os.path.join(tmp, "lobby")
-    shutil.copytree(os.path.join(ROOT, "projects", "lobby"), proj, ignore=shutil.ignore_patterns("out", "drawing.*"))
+    shutil.copytree(os.path.join(ROOT, "tests", "fixtures", "lobby"), proj, ignore=shutil.ignore_patterns("out", "drawing.*"))
     rep = render(proj, linework=True, out_name="linework.png")
     img = cv2.imread(os.path.join(proj, "out", "linework.png"))
     if update:
@@ -36,10 +36,10 @@ def main(update=False):
     if not good:
         cv2.imwrite(os.path.join(tmp, "diff.png"), diff.astype(np.uint8)*255)
         print(f"      result {os.path.join(proj, 'out', 'linework.png')}, differences {os.path.join(tmp, 'diff.png')}")
-    rows = list(csv.DictReader(open(os.path.join(proj, "out", "positions.csv"))))
+    rows = list(csv.DictReader(open(os.path.join(proj, "out", "positions_linework.csv"))))
     good = len(rows) == EXPECTED_ITEMS
     ok &= good
-    print(f"{'PASS' if good else 'FAIL'}  positions.csv: {len(rows)} items (expected {EXPECTED_ITEMS})")
+    print(f"{"PASS" if good else "FAIL"}  positions_linework.csv: {len(rows)} items (expected {EXPECTED_ITEMS})")
     return ok
 
 

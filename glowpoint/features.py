@@ -199,4 +199,37 @@ def wash(cv, f):
     cv.add(f, "wash", f["plane"], m.to3d(s, u0, yt), note=f"range {u0:.2f}..{u1:.2f}")
 
 
-LIGHTS = dict(downlight=downlight, sconce=sconce, uplight=uplight, wash=wash)
+def pendant(cv, f):
+    """A pendant hanging from a horizontal surface. Height: "y" (bottom of the shade above the floor)
+    or "drop" (from the ceiling to the bottom of the shade)."""
+    m = cv.m; s = m.surface(f["plane"])
+    for x, z in itertools.product(as_list(f["x"]), as_list(f["z"])):
+        top = m.to3d(s, x, z)
+        y = f["y"] if "y" in f else top[1] - f.get("drop", 10.0)
+        r = f.get("d", 1.5)/2; hgt = f.get("h", 0.6)
+        th = np.linspace(0, 2*np.pi, 48, endpoint=False)
+        bottom = [[x+r*np.cos(t), y, z+r*np.sin(t)] for t in th]
+        upper = [[x+r*0.55*np.cos(t), y+hgt, z+r*0.55*np.sin(t)] for t in th]
+        c = [x, y + hgt/2, z]
+        shade = bottom + upper
+        sp = m.project(shade); vis = cv.visible(shade, sp)
+        if vis.mean() < 0.5:
+            cv.add(f, "pendant", f["plane"], [x, y, z], visible=False); continue
+        pc = m.project([c])[0]; halo = max(5, int(m.f*r*2.2/max(m.depth([c])[0], 0.1)))
+        cv2.circle(cv.over, tuple(np.int32(pc)), halo, (120, 230, 255), -1, cv2.LINE_AA)
+        pr = f.get("pool_r", 0.0)
+        if pr > 0:
+            ty = f.get("beam_to", 0.0)
+            pool = [[x+pr*np.cos(t), ty, z+pr*np.sin(t)] for t in th]; pp = m.project(pool)
+            if cv.visible(pool, pp).mean() > 0.6:
+                pim = cv.img.copy(); cv2.fillPoly(pim, [np.int32(pp)], GLOW, cv2.LINE_AA)
+                cv.img[:] = cv2.addWeighted(pim, 0.35, cv.img, 0.65, 0)
+        cv.seg(top, [x, y + hgt, z], 1)
+        hull = cv2.convexHull(np.float32(sp)).astype(np.int32)
+        cv2.fillPoly(cv.img, [hull], (255, 255, 255), cv2.LINE_AA)
+        cv2.polylines(cv.img, [hull], True, (0, 0, 0), 1, cv2.LINE_AA)
+        cv2.polylines(cv.img, [np.int32(m.project(bottom))], True, (0, 0, 0), 1, cv2.LINE_AA)
+        cv.add(f, "pendant", f["plane"], [x, y, z], visible=True)
+
+
+LIGHTS = dict(downlight=downlight, sconce=sconce, uplight=uplight, wash=wash, pendant=pendant)

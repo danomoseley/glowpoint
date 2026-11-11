@@ -5,3 +5,5 @@ projects/*/drawing.*
 projects/*/out/
 # Private projects and plugins inside a clone
 local/
+# zoom images written outside a project
+zoom*.png
