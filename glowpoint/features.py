@@ -388,5 +388,110 @@ def luminous(cv, f):
     cv.add(f, "luminous", f["plane"], c, visible=bool(k.any()), note=f"{area:.1f} sq ft" + (f", panels {mod*12:.0f} in" if mod else ""))
 
 
+def slots(cv, f):
+    """Narrow recessed lines in a surface: lit slots (lens) or track channels (track), as parallel lines or a grid."""
+    m = cv.m; s = m.surface(f["plane"]); i = cv.sid(f["plane"]); a = s["axis"]
+    keys = [k for k in "XYZ" if k != "XYZ"[a]]                     # the two axes of the surface
+    P = cv.P; k_area = cv.ids == i
+    for key in keys:
+        lo, hi = f[key]; c = P[..., "XYZ".index(key)]; k_area &= (c >= lo) & (c <= hi)
+    w = f.get("w", 0.25); pitch = f.get("pitch", 4.0); style = f.get("style", "lens")
+    direction = f.get("direction", "grid")
+    # a line "along Z" has a constant X: its distance is measured across X
+    across = {"z": [keys[0]], "x": [keys[1]], "grid": keys}.get(direction)
+    if across is None: raise ValueError("slots direction must be 'x', 'z' or 'grid'")
+    band = np.zeros(k_area.shape, bool); centre = np.zeros(k_area.shape, bool); n_lines = 0
+    for key in across:
+        lo, hi = f[key]; u = P[..., "XYZ".index(key)] - lo - f.get("offset", pitch/2)
+        gy, gx = np.gradient(u); px = np.hypot(gx, gy)
+        dist = np.abs(u - np.round(u/pitch)*pitch)
+        band |= k_area & (dist <= np.maximum(w/2, 0.6*px)) & (px < pitch/3)
+        centre |= k_area & (dist <= np.maximum(w/6, 0.4*px)) & (px < pitch/3)
+        n_lines += int((hi - lo - f.get("offset", pitch/2))/pitch + 1e-6) + 1
+    if style == "lens":
+        for ch, val in enumerate((165, 238, 255)):
+            cv.img[..., ch][band] = val
+        # soft spill next to the slots
+        if band.any():
+            dist_px = cv2.distanceTransform((~band).astype(np.uint8), cv2.DIST_L2, 3)
+            g = f.get("strength", 0.7)*np.exp(-(dist_px/6.0)**2)
+            cv.glow(k_area & ~band, g)
+    elif style == "track":
+        cv.img[band] = (60, 60, 60)
+        sp = f.get("spot_spacing")
+        if sp:                                                     # spot heads along the tracks
+            heads = np.zeros(band.shape, bool)
+            for key in across:
+                other = [kk for kk in keys if kk != key][0]
+                lo_k = f[key][0]; u = P[..., "XYZ".index(key)] - lo_k - f.get("offset", pitch/2)
+                du = np.abs(u - np.round(u/pitch)*pitch)
+                lo_o = f[other][0]; v = P[..., "XYZ".index(other)] - lo_o - sp/2
+                gy, gx = np.gradient(v); px = np.hypot(gx, gy)
+                dv = np.abs(v - np.round(v/sp)*sp)
+                hs = f.get("spot_size", 0.35)/2
+                heads |= k_area & (du <= hs) & (dv <= hs) & (px < sp/6)      # only where the heads are separate
+            if heads.any():
+                for ch, val in enumerate((165, 238, 255)):
+                    cv.img[..., ch][heads] = val
+                dist_px = cv2.distanceTransform((~heads).astype(np.uint8), cv2.DIST_L2, 3)
+                cv.glow(k_area & ~heads, 0.7*np.exp(-(dist_px/5.0)**2))
+                edge = heads & ~cv2.erode(heads.astype(np.uint8), np.ones((3, 3), np.uint8)).astype(bool)
+                cv.img[edge] = (40, 40, 40)
+    else:
+        raise ValueError("slots style must be 'lens' or 'track'")
+    c = [0.0, 0.0, 0.0]; c[a] = s["at"]
+    for key in keys: c["XYZ".index(key)] = sum(f[key])/2
+    cv.add(f, "slots", f["plane"], c, visible=bool(band.any()),
+           note=f"{style} {direction}, {n_lines} lines, {w*12:.1f} in wide, {pitch:.2f} ft apart")
+
+
+def linear_pendant(cv, f):
+    """Suspended linear fixture: direct light down and indirect light up onto the ceiling."""
+    m = cv.m
+    s = m.surface(f["plane"]) if "plane" in f else None
+    direction = f.get("direction", "z")
+    L = f.get("length", 4.0); wd = f.get("w", 0.3); hh = f.get("h", 0.25)
+    ai = 2 if direction == "z" else 0; bi = 0 if direction == "z" else 2     # along, across
+    for x, z in itertools.product(as_list(f["x"]), as_list(f["z"])):
+        top_y = f["from_y"] if "from_y" in f else (s["at"] if s else None)
+        if top_y is None: raise ValueError("linear_pendant needs 'plane' or 'from_y'")
+        yb = f["y"] if "y" in f else top_y - f.get("drop", 4.0)            # bottom of the fixture
+        c = np.array([x, yb + hh/2, z])
+        # body corners
+        def pt(da, db, dy):
+            q = c.copy(); q[ai] += da; q[bi] += db; q[1] += dy; return q.tolist()
+        bottom = [pt(-L/2, -wd/2, -hh/2), pt(L/2, -wd/2, -hh/2), pt(L/2, wd/2, -hh/2), pt(-L/2, wd/2, -hh/2)]
+        topq = [pt(-L/2, -wd/2, hh/2), pt(L/2, -wd/2, hh/2), pt(L/2, wd/2, hh/2), pt(-L/2, wd/2, hh/2)]
+        allp = bottom + topq
+        pix = m.project(allp); vis = cv.visible(allp, pix)
+        if vis.mean() < 0.4 or not np.all(np.isfinite(pix)):
+            cv.add(f, "linear_pendant", f.get("plane", "y=%g" % top_y), c.tolist(), visible=False); continue
+        # indirect light on the surfaces above (ceiling) and direct light below, measured in 3D
+        P = cv.P
+        dperp = np.abs(P[..., bi] - c[bi])
+        dalong = np.maximum(np.abs(P[..., ai] - c[ai]) - L/2, 0)
+        above = (P[..., 1] > c[1] + hh) & (cv.ids >= 0)
+        below = (P[..., 1] < c[1] - hh) & (cv.ids >= 0)
+        up, down = f.get("up", 0.6), f.get("down", 0.5)
+        if up > 0:
+            sp = f.get("spread_up", 3.0)
+            cv.glow(above, up*np.exp(-(dperp/sp)**2 - (dalong/sp)**2))
+        if down > 0:
+            sp = f.get("spread_down", 2.5)
+            cv.glow(below & (P[..., 1] < 0.2), down*np.exp(-(dperp/sp)**2 - (dalong/sp)**2))
+        # body: sides, then the lit bottom lens
+        hull = cv2.convexHull(np.float32(pix)).astype(np.int32)
+        cv2.fillPoly(cv.img, [hull], (225, 225, 225), cv2.LINE_AA)
+        cv2.polylines(cv.img, [hull], True, (0, 0, 0), 1, cv2.LINE_AA)
+        bp = np.int32(m.project(bottom))
+        cv2.fillPoly(cv.img, [bp], (165, 238, 255), cv2.LINE_AA)
+        cv2.polylines(cv.img, [bp], True, (60, 60, 60), 1, cv2.LINE_AA)
+        # suspension cables at both ends
+        for da in (-L/2*0.85, L/2*0.85):
+            cv.seg(pt(da, 0, hh/2), [pt(da, 0, hh/2)[0], top_y, pt(da, 0, hh/2)[2]], 1)
+        cv.add(f, "linear_pendant", f.get("plane", "y=%g" % top_y), [x, yb, z], visible=True,
+               note=f"{L:.1f} ft along {direction.upper()}")
+
+
 LIGHTS = dict(downlight=downlight, sconce=sconce, uplight=uplight, wash=wash, pendant=pendant, fixture=fixture,
-              luminous=luminous)
+              luminous=luminous, slots=slots, linear_pendant=linear_pendant)

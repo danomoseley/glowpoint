@@ -26,7 +26,7 @@ GEOMETRY.update(ARCH.GEOMETRY)
 
 
 def evaluate(f, ns):
-    return {k: (ev(v, ns) if k not in ("layer", "type", "name", "note", "plane", "slot", "fixture", "shape", "align", "kind", "direction", "color", "ceiling") else v) for k, v in f.items()}
+    return {k: (ev(v, ns) if k not in ("layer", "type", "name", "note", "plane", "slot", "fixture", "shape", "align", "kind", "direction", "color", "ceiling", "style", "top") else v) for k, v in f.items()}
 
 
 def legend(img, title, layers, at="bottom-left"):

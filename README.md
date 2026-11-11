@@ -230,10 +230,13 @@ glowpoint warns when two fixtures from different layers are at the same place (f
 | [`wash`](#wash) | Wall wash from the top of a wall, optionally from a ceiling slot |
 | [`pendant`](#pendant) | Pendant on a cord, from a ceiling or from inside coffers |
 | [`fixture`](#fixture) | A specific fixture, drawn from its parts (trim, lens, rings, slots) |
+| [`slots`](#slots) | Narrow recessed lines in a ceiling: lit slots or track channels with spot heads, as lines or a grid |
+| [`linear_pendant`](#linear_pendant) | Suspended linear fixture with direct light down and indirect light up onto the ceiling |
 | [`luminous`](#luminous) | A glowing ceiling or wall area (luminous ceiling, backlit stretch ceiling), with optional panel joints |
 | [`waffle`](#waffle) | Square or round coffers cut into a ceiling |
 | [`cove`](#cove) | A recessed ceiling cove (tray), or a wall cove (a lit ledge on a wall) |
 | [`slats`](#slats) | Parallel slats or baffles below a ceiling, optionally lit from above |
+| [`lightwell`](#lightwell) | A deep opening in a ceiling (round or rectangular) with a glowing top: a skylight or laylight, with concealed light on its walls |
 
 More types can be added as plugins (see [Adding your own types](#adding-your-own-types-plugins)).
 
@@ -348,6 +351,47 @@ Parts are drawn in order, so later parts are on top. All sizes in feet.
 
 To describe a fixture from a photo or a spec sheet: start with the outer trim (`fill` + `line`), then the lens or aperture (`fill`, `lit`), then details (`line` rings, `slots`). Use the real dimensions from the spec sheet.
 
+### `slots`
+Narrow recessed lines in a surface: lit slots (a lens flush with the ceiling) or track channels with spot heads, as single lines, parallel lines, or a grid.
+
+```json
+{"type": "slots", "plane": "Ceiling", "X": "(box('Column R1').x1 + 1, surf('Right wall').at - 1)", "Z": [20, 105],
+ "direction": "grid", "pitch": 4, "w": "inch(2)", "style": "track", "spot_spacing": 2}
+```
+
+| Key | Default | Meaning |
+|---|---|---|
+| `plane` | | Surface |
+| `X`, `Y`, `Z` | | (start, end) of the area, on the two axes of the surface (as for `luminous`) |
+| `direction` | `grid` | `z`: lines that run along Z; `x`: lines that run along X; `grid`: both |
+| `pitch` | 4.0 | Spacing between lines, ft |
+| `offset` | pitch / 2 | Distance from the start of the area to the first line, ft. For one line, use a large `pitch` and set `offset` |
+| `w` | 0.25 | Slot or track width, ft |
+| `style` | `lens` | `lens`: lit slot. `track`: dark track channel |
+| `strength` | 0.7 | Lens slots: brightness of the light next to the slot |
+| `spot_spacing` | none | Track: distance between spot heads along each track, ft |
+| `spot_size` | 0.35 | Track: size of a spot head, ft |
+
+### `linear_pendant`
+A suspended linear fixture (direct/indirect): a lit lens below, light up onto the ceiling, and light down onto the floor. Two cables hold it.
+
+```json
+{"type": "linear_pendant", "plane": "Ceiling", "x": ["0", "12.7"], "z": "every(65, 105, 10)",
+ "drop": 8, "length": 6, "direction": "z"}
+```
+
+| Key | Default | Meaning |
+|---|---|---|
+| `plane` | | Ceiling it hangs from (or `from_y`) |
+| `from_y` | | Instead of `plane`: the height where the cables start (for example `coffers('Waffle', 'y')`) |
+| `x`, `z` | | Centre position(s). Lists make a row or a grid |
+| `y` | | Height of the bottom of the fixture, ft (or use `drop`) |
+| `drop` | 4.0 | Distance from the cable start to the bottom of the fixture, ft |
+| `length`, `w`, `h` | 4.0, 0.3, 0.25 | Fixture size, ft |
+| `direction` | `z` | The direction the fixture runs: `z` or `x` |
+| `up`, `down` | 0.6, 0.5 | Strength of the light up (on the ceiling) and down (on the floor), 0 to 1 |
+| `spread_up`, `spread_down` | 3.0, 2.5 | How far the light spreads on the ceiling and on the floor, ft |
+
 ### `luminous`
 A glowing area on a surface: a luminous ceiling, a backlit stretch ceiling, or a light wall.
 
@@ -406,6 +450,13 @@ Two kinds of cove. Both change the model, so the cove hides what is behind it.
  "Z": "(surf('Ceiling').Z[0], centre_line('Column L1', 'Column R1', 'Z'))", "depth": 1.0}
 ```
 
+**Perimeter cove** (`"kind": "perimeter"`): a lowered border (soffit) around a ceiling area. A hidden light on the border's ledge grazes the ceiling in the centre, brightest near the edges.
+
+```json
+{"type": "cove", "kind": "perimeter", "plane": "Ceiling", "X": "inset(gap('Column L1', 'Column R1'), 1)",
+ "Z": "(surf('Ceiling').Z[0], centre_line('Column L1', 'Column R1', 'Z'))", "border": 2.0, "drop": 1.0}
+```
+
 **Wall cove** (`"kind": "wall"`): a ledge along a wall with a hidden light on top. It lights the wall above it and, if you name the ceiling, the ceiling near the wall.
 
 ```json
@@ -415,15 +466,18 @@ Two kinds of cove. Both change the model, so the cove hides what is behind it.
 
 | Key | Default | Meaning |
 |---|---|---|
-| `kind` | `recess` | `recess` or `wall` |
+| `kind` | `recess` | `recess`, `perimeter`, or `wall` |
 | `name` | `Cove` | Name of the cove. Give each cove a different name |
 | `plane` | `Ceiling` | Recess: the ceiling it is cut into. Wall: the wall |
-| `X`, `Z` | | Recess: (start, end) of the tray |
+| `X`, `Z` | | Recess: (start, end) of the tray. Perimeter: (start, end) of the whole area, border included |
+| `border` | 2.0 | Perimeter: width of the lowered border, ft |
+| `drop` | 1.0 | Perimeter: how far the border hangs below the ceiling, ft |
+| `gap` | 0.5 | Perimeter: height of the open gap between the fascia and the ceiling, where the light comes out, ft |
 | `depth` | 1.0 (wall) | Recess: depth of the tray, ft. Wall: how far the ledge projects from the wall, ft |
 | `range` | | Wall: (start, end) along the wall |
 | `y` | | Wall: height of the top of the ledge, ft |
 | `h` | 0.5 | Wall: height of the ledge fascia, ft |
-| `fade` | 4.0 | Wall: how far up the wall the light goes, ft |
+| `fade` | 4.0 / 3.0 | Wall: how far up the wall the light goes, ft. Perimeter: how far the light grazes into the ceiling, ft (default 3.0) |
 | `ceiling` | none | Wall: name of the ceiling that gets light near the wall |
 | `spread` | 4.0 | Wall: how far onto the ceiling the light goes, ft |
 | `strength` | 0.85 | Brightness, 0 to 1 |
@@ -448,6 +502,27 @@ Parallel slats (or baffles) hanging below a ceiling, ray-traced so that you see 
 | `backlit` | false | true: light between the slats (a lit ceiling above them) |
 
 ![A recessed cove, backlit wood slats, a wall cove, and a luminous ceiling with 2 ft panels](docs/coves-slats-luminous.png)
+
+### `lightwell`
+A deep opening in a ceiling with a glowing top (a skylight or a laylight) and concealed light on its walls, brightest near the top. The opening changes the model, so you see into it correctly from any view, and it lights the floor below.
+
+```json
+{"type": "lightwell", "name": "Well 1", "shape": "round", "x": 6.34, "z": 75, "d": 6, "depth": 4}
+```
+
+| Key | Default | Meaning |
+|---|---|---|
+| `name` | `Light well` | Name. Give each well a different name |
+| `plane` | `Ceiling` | The ceiling it is cut into |
+| `shape` | `rect` | `rect` or `round` |
+| `X`, `Z` | | Rectangular: (start, end) of the opening |
+| `x`, `z`, `d` | | Round: centre and diameter, ft |
+| `depth` | | Depth of the well, ft |
+| `top` | `sky` | Colour of the top: `sky` (daylight), `warm`, or `white` |
+| `wall_light` | 0.6 | Brightness of the light on the walls, 0 to 1 |
+| `pool` | 0.4 | Brightness of the light on the floor below, 0 to 1 (0 = none) |
+
+![A light well, linear direct/indirect pendants, a track grid with spot heads, and a perimeter cove, seen from below](docs/slots-wells-linear.png)
 
 ## Relationships (expressions)
 
@@ -481,7 +556,7 @@ Examples:
 
 Expressions run in a restricted Python evaluator with only these names (and Python arithmetic, lists, and slices).
 
-**Text that is not an expression.** These keys always hold plain text and are never evaluated: `layer`, `type`, `name`, `note`, `plane`, `slot`, `fixture`, `shape`, `align`, `kind`, `direction`, `color`, `ceiling`. Every other text value is an expression, so a new text option in a plugin must be added to that list in `glowpoint/render.py`, or a word such as `round` is read as a Python name.
+**Text that is not an expression.** These keys always hold plain text and are never evaluated: `layer`, `type`, `name`, `note`, `plane`, `slot`, `fixture`, `shape`, `align`, `kind`, `direction`, `color`, `ceiling`, `style`, `top`. Every other text value is an expression, so a new text option in a plugin must be added to that list in `glowpoint/render.py`, or a word such as `round` is read as a Python name.
 
 ## Outputs
 

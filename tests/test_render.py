@@ -128,6 +128,28 @@ def main(update=False):
     print(f"{'PASS' if good else 'FAIL'}  coves, slats, luminous: {len(coves)} coves, "
           f"{slat['note'][:20] if slat else 'no slats'}, {lum['note'] if lum else 'no luminous'}")
     ok &= good
+    # 8. perimeter cove, slots (track grid and lens), light wells (round and rect), linear pendants
+    d3 = json.load(open(os.path.join(proj, "design.json")))
+    d3["layers"][0] = {"name": "Perimeter", "features": [{"type": "cove", "kind": "perimeter", "plane": "Ceiling",
+        "X": "inset(gap('Column L1', 'Column R1'), 1)", "Z": "(surf('Ceiling').Z[0], centre_line('Column L1', 'Column R1', 'Z'))"}]}
+    d3["layers"] += [
+        {"name": "Track", "features": [{"type": "slots", "plane": "Ceiling", "X": [29, 37.5], "Z": [20, 105], "direction": "grid",
+            "pitch": 4, "w": "inch(2)", "style": "track", "spot_spacing": 2}]},
+        {"name": "Lens", "features": [{"type": "slots", "plane": "Left soffit", "X": "surf('Left soffit').X", "Z": [56, 110],
+            "direction": "z", "pitch": 30, "offset": 4.3, "w": "inch(4)"}]},
+        {"name": "Wells", "features": [{"type": "lightwell", "name": "Well 1", "shape": "round", "x": 6.34, "z": 75, "d": 6, "depth": 4},
+            {"type": "lightwell", "name": "Well 2", "X": [3, 9], "Z": [92, 98], "depth": 3}]},
+        {"name": "Linear", "features": [{"type": "linear_pendant", "plane": "Ceiling", "x": [-0.66, 13.34],
+            "z": "every(65, 105, 10)", "drop": 8, "length": 6}]}]
+    json.dump(d3, open(os.path.join(proj, "design.renfro.json"), "w"))
+    rep = render(proj, linework=True, out_name="renfro.png", design_file="design.renfro.json")
+    by = lambda t: [r for r in rep if r["type"] == t]
+    sl = by("slots"); wl = by("lightwell"); lp = by("linear_pendant"); cv_ = by("cove")
+    good = (len(cv_) == 1 and "perimeter" in cv_[0]["note"] and len(sl) == 2 and "track grid" in sl[0]["note"]
+            and "1 lines" in sl[1]["note"] and len(wl) == 2 and len(lp) == 10)
+    print(f"{'PASS' if good else 'FAIL'}  perimeter cove, slots, light wells, linear pendants: "
+          f"{len(cv_)} cove, {len(sl)} slot fields, {len(wl)} wells, {len(lp)} linear pendants")
+    ok &= good
     return ok
 
 

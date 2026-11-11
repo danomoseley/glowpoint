@@ -74,7 +74,7 @@ for t in ("render", "calibrate", "measure", "zoom", "doctor"):
         problems.append(f"tool glowpoint.{t} is not in AGENTS.md")
 
 # 5. README links
-heads = {re.sub(r"[^a-z0-9 -]", "", h.strip().lower()).replace(" ", "-") for h in re.findall(r"^#+ (.*)$", README, re.M)}
+heads = {re.sub(r"[^a-z0-9 _-]", "", h.strip().lower()).replace(" ", "-") for h in re.findall(r"^#+ (.*)$", README, re.M)}
 for a in sorted(set(re.findall(r"\]\(#([^)]+)\)", README)) - heads):
     problems.append(f"README link to #{a} has no matching section")
 for f in sorted(set(re.findall(r"\]\((?!http|#)([^)\s]+)\)", README))):
