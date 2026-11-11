@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+# Architect drawings and renders stay private
+projects/*/drawing.*
+projects/*/out/

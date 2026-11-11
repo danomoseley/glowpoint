@@ -1,0 +1,59 @@
+{
+  "title": "LIGHTING CONCEPT",
+  "layers": [
+    {
+      "name": "Waffle coffers",
+      "description": "soft ambient glow over the main hall",
+      "features": [
+        {"type": "waffle", "plane": "Ceiling",
+         "X": "inset(gap('Column L1', 'Column R1'), 3)",
+         "Z": "(surf('Ceiling').Z[0], centre_line('Column L1', 'Column R1', 'Z'))",
+         "module": "inch(20)", "rib": "inch(4)", "depth": "inch(6)",
+         "note": "3 ft from the inner column faces; back end on the line through the column centres"}
+      ]
+    },
+    {
+      "name": "Column uplights",
+      "description": "every visible column face",
+      "features": [
+        {"type": "uplight", "faces": "visible_faces('column')", "offset": 0.5, "fade": 12}
+      ]
+    },
+    {
+      "name": "Back wall wash",
+      "description": "bright focal wall at the end of the hall",
+      "features": [
+        {"type": "wash", "plane": "Back wall", "range": "surf('Back wall').X", "fade": 14, "strength": 0.85}
+      ]
+    },
+    {
+      "name": "Left wall wash",
+      "description": "from a slot in the soffit, past the desk",
+      "features": [
+        {"type": "wash", "plane": "Left wall", "range": "(box('Desk').z1 + 2, surf('Left wall').Z[1])",
+         "fade": 9, "strength": 0.75, "slot": {"plane": "Left soffit", "offset": 2}}
+      ]
+    },
+    {
+      "name": "Reception",
+      "description": "3 downlights on the desk, 4 wall sconces",
+      "features": [
+        {"type": "downlight", "plane": "Left soffit", "x": "box('Desk').xc",
+         "z": "spaced(box('Desk').z0, box('Desk').z1, 3)", "d": "inch(8)",
+         "beam_to": "box('Desk').top", "pool_r": 1.4},
+        {"type": "sconce", "plane": "Left wall", "along": "spaced(box('Desk').z0, box('Desk').z1, 4)", "y": 6.5}
+      ]
+    },
+    {
+      "name": "Downlights",
+      "description": "along the glazing and on the hall axis",
+      "features": [
+        {"type": "downlight", "plane": "Ceiling", "x": "mid((box('Column R1').x1, surf('Right wall').at))",
+         "z": "every(40, 100, 12)", "d": "inch(8)", "pool_r": 3.0, "cone": false, "pool_a": 0.35},
+        {"type": "downlight", "plane": "Ceiling", "x": "mid(inset(gap('Column L1', 'Column R1'), 3))",
+         "z": "every(centre_line('Column L1', 'Column R1', 'Z') + 9, surf('Back wall').at - 6, 10)",
+         "d": "inch(8)", "pool_r": 3.0, "cone": false, "pool_a": 0.35}
+      ]
+    }
+  ]
+}
