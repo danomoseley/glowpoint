@@ -136,6 +136,8 @@ One folder for each drawing. To start a new project, make a new folder with the 
 
 To experiment with the lobby example, copy it first: `cp -r projects/lobby local/lobby`. The tests use their own copy in `tests/fixtures/`, so the example can change without breaking them, but a copy keeps the repository clean.
 
+> **Use the original drawing.** glowpoint marks every PNG that it writes (a hidden text field, the pixels do not change) and refuses a marked image as `drawing.png`, so an output with lights already drawn on it is not used again by mistake. Screenshots and JPEG copies lose the mark, so keep the original file.
+
 > **Drawings are not in this repository.** The architects' drawings belong to the architects or their clients. `.gitignore` excludes `projects/*/drawing.*` and `projects/*/out/`. The lobby example runs with `--linework`.
 
 ## model.json: the 3D model

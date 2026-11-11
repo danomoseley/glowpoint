@@ -12,9 +12,10 @@ glowpoint places lighting concepts on a perspective image of a space. The full r
 6. **When a light looks wrong, check the model first.** The usual cause is a surface or box that does not match the image. Run with `--check`.
 7. **State your assumptions.** If the request leaves out a size, choose a normal value and tell the user which one.
 8. **Keep user projects and images out of git.** Put projects in `local/` or outside the clone. Architects' drawings and renders are often confidential.
-9. **Edit JSON files by inserting or changing text**, not by writing the whole file again with a JSON library. That keeps the layout and the diffs small.
-10. **Do not edit `projects/lobby` for experiments.** Copy it to `local/` first.
-11. **After a code change, run the tests:** `python3 tests/test_calibrate.py` and `python3 tests/test_render.py`.
+9. **Use the original drawing.** `drawing.png` must be the file that the user gave you, not an output from `out/` and not an image with lights or coffers already drawn on it. glowpoint marks its own PNG outputs and refuses them as a drawing, but screenshots and JPEG copies lose that mark. If a conversation has several images, confirm with the user which one is the original. If the drawing already shows colored lights or coffers, stop and ask.
+10. **Edit JSON files by inserting or changing text**, not by writing the whole file again with a JSON library. That keeps the layout and the diffs small.
+11. **Do not edit `projects/lobby` for experiments.** Copy it to `local/` first.
+12. **After a code change, run the tests:** `python3 tests/test_calibrate.py` and `python3 tests/test_render.py`.
 
 Run all commands from the repository root (`python3 -m glowpoint.<tool>`). In a new environment, run `python3 -m glowpoint.doctor` first. If you cannot clone from GitHub (no internet), ask the user to upload the repository as a zip (GitHub: Code → Download ZIP).
 

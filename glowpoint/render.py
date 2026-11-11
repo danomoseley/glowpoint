@@ -13,6 +13,7 @@ Other views:  --camera view.json   use a different camera (see model.json "camer
 import argparse, csv, json, os
 import numpy as np
 import cv2
+from . import pngmark
 from .model import Model
 from .expr import namespace, ev
 from . import features as F
@@ -104,6 +105,9 @@ def render(project, check=False, out_name="concept.png", design_file="design.jso
     else:
         raise FileNotFoundError(dpath)
     has_drawing = os.path.exists(m.drawing)
+    if has_drawing and pngmark.is_marked(m.drawing):
+        raise ValueError(f"{m.drawing} is an image that glowpoint made (it already has lights or coffers drawn on it). "
+                         "Use the architect's original drawing as drawing.png. Outputs are in out/.")
     base = None if (camera or linework or not has_drawing) else cv2.imread(m.drawing)
     if base is None and not (camera or linework):
         raise FileNotFoundError(f"{m.drawing} not found. Add the drawing, or use --linework to draw the model.")
@@ -119,7 +123,7 @@ def render(project, check=False, out_name="concept.png", design_file="design.jso
     stem = os.path.splitext(out_name)[0]
     suffix = "" if out_name == "concept.png" else "_" + stem       # each view keeps its own check and positions files
     if check:
-        cv2.imwrite(os.path.join(project, "out", f"check{suffix}.png"), check_image(m, base))
+        pngmark.write(os.path.join(project, "out", f"check{suffix}.png"), check_image(m, base))
 
     layers = design["layers"]
     lights, geometry, helper_factories, loaded = plugins.load(project, F.LIGHTS, GEOMETRY)
@@ -167,7 +171,7 @@ def render(project, check=False, out_name="concept.png", design_file="design.jso
     img = cv.finish()
     if design.get("legend", True):
         img = legend(img, design.get("title", "LIGHTING CONCEPT"), [(L["name"], L.get("description", "")) for L in layers])
-    cv2.imwrite(os.path.join(project, "out", out_name), img)
+    pngmark.write(os.path.join(project, "out", out_name), img)
     with open(os.path.join(project, "out", f"positions{suffix}.csv"), "w", newline="") as fh:
         keys = ["layer", "type", "surface", "x", "y", "z", "visible", "note"]
         w = csv.DictWriter(fh, fieldnames=keys, extrasaction="ignore"); w.writeheader()

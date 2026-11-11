@@ -17,6 +17,7 @@ around it, read the coordinates, and check them with --mark before you measure.
 import argparse
 import numpy as np
 import cv2
+from . import pngmark
 
 
 def nice_step(span_px):
@@ -75,7 +76,7 @@ def main():
     import os
     out = a.out or os.path.join(os.path.dirname(os.path.abspath(a.image)), "out", "zoom.png")
     os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)
-    cv2.imwrite(out, zoom(img, a.box or None, a.step, marks))
+    pngmark.write(out, zoom(img, a.box or None, a.step, marks))
     print(f"wrote {out}")
 
 

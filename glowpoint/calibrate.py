@@ -22,6 +22,7 @@ Writes camera.json (paste into model.json "camera"), and calibration.png that sh
 import argparse, json
 import numpy as np
 import cv2
+from . import pngmark
 from .model import rotation, angles
 
 
@@ -187,6 +188,8 @@ def main():
     ap.add_argument("--tol", type=float, default=1.0, help="line-to-vanishing-point tolerance, degrees (hand drawings: 2)")
     ap.add_argument("--out", default="camera.json"); ap.add_argument("--overlay", default="calibration.png")
     a = ap.parse_args()
+    if pngmark.is_marked(a.image):
+        raise SystemExit(f"{a.image} is an image that glowpoint made. Use the architect's original drawing.")
     img = cv2.imread(a.image); gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     S = segments(gray)
     vps, c, scale = find_vps(S, gray.shape, tol=a.tol)
@@ -200,7 +203,7 @@ def main():
         print(f"  VP{k+1}: {d['n']} lines, fit {d['rms_deg']:.2f} deg rms, {where}, {'vertical' if d['vertical_share'] > .5 else 'horizontal'}")
         for s in S[d["inliers"]]:
             cv2.line(ov, tuple(np.int32(s[:2])), tuple(np.int32(s[2:])), cols[k % 3], 2, cv2.LINE_AA)
-    cv2.imwrite(a.overlay, ov)
+    pngmark.write(a.overlay, ov)
     if R is None:
         for n in cam["notes"]: print("  note:", n)
         return
