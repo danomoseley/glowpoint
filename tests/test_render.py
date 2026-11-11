@@ -86,6 +86,18 @@ def main(update=False):
     print(f"{'PASS' if good else 'FAIL'}  coffer fixtures: {len(fx)} (expected 420 = 14 x 30), "
           f"{sum(bool(r['visible']) for r in fx)} visible")
     ok &= good
+    # 5. round coffers, centred: 11 x 25 full coffers of 24 in in the lobby waffle area
+    w = d["layers"][0]["features"][0]
+    w.update({"shape": "round", "module": "inch(24)", "d": "inch(18)", "depth": "inch(6)", "align": "centre"})
+    json.dump(d, open(os.path.join(proj, "design.round.json"), "w"))
+    rep = render(proj, linework=True, out_name="round.png", design_file="design.round.json")
+    fx = [r for r in rep if r["type"] == "fixture"]
+    xs = sorted({r["x"] for r in fx}); (x0, x1) = (-5.32, 18.01)
+    centred = abs((xs[0] - x0) - (x1 - xs[-1])) < 0.02
+    good = len(fx) == 275 and len(xs) == 11 and centred
+    print(f"{'PASS' if good else 'FAIL'}  round coffers: {len(fx)} fixtures (expected 275 = 11 x 25), "
+          f"centred: {centred} (left {xs[0]-x0:.2f} ft, right {x1-xs[-1]:.2f} ft)")
+    ok &= good
     return ok
 
 

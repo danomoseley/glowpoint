@@ -333,12 +333,27 @@ To describe a fixture from a photo or a spec sheet: start with the outer trim (`
 ### `waffle`
 A waffle-slab ceiling of square coffers. It changes the model, so lights hide correctly inside the coffers.
 
-| Key | Meaning |
-|---|---|
-| `plane` | The ceiling it is cut into |
-| `X`, `Z` | (start, end) of the waffle area. The grid starts at the far end (`Z` end) and the left edge (`X` start) |
-| `module`, `rib`, `depth` | Grid spacing, rib width, coffer depth, ft |
-| `lit` | true: coffers glow. false: coffers are plain |
+| Key | Default | Meaning |
+|---|---|---|
+| `plane` | | The ceiling it is cut into |
+| `X`, `Z` | | (start, end) of the waffle area |
+| `shape` | `square` | `square` (coffers separated by ribs) or `round` (round recesses in a flat ceiling) |
+| `module` | | Grid spacing, centre to centre, ft |
+| `rib` | | Square coffers: rib width, ft (the coffer opening is `module − rib`) |
+| `d` | | Round coffers: diameter, ft. Must be smaller than `module` |
+| `depth` | | Coffer depth, ft |
+| `align` | `start` | `start`: the grid starts at the far end (`Z` end) and the left edge (`X` start); a cut coffer can remain at the other edges. `centre`: only full coffers, centred in the area, with equal solid borders |
+| `lit` | true | true: coffers glow. false: coffers are plain (use this when fixtures in the coffers give the light) |
+
+Round coffers, 24 in on centre, 18 in diameter, 6 in deep, centred:
+
+```json
+{"type": "waffle", "plane": "Ceiling", "X": "inset(gap('Column L1', 'Column R1'), 3)",
+ "Z": "(surf('Ceiling').Z[0], centre_line('Column L1', 'Column R1', 'Z'))",
+ "shape": "round", "module": "inch(24)", "d": "inch(18)", "depth": "inch(6)", "align": "centre", "lit": false}
+```
+
+![Round coffers with an 8 in fixture in each, seen from below](docs/round-coffers.png)
 
 ## Relationships (expressions)
 
@@ -358,7 +373,7 @@ Expressions refer to the model by name. Use them for all positions that depend o
 | `every(start, stop, step)` | start, start + step, … up to stop |
 | `inch(n)` | n inches in feet |
 | `visible_faces('column')` | Every face of every column that is visible in the drawing |
-| `coffers('Waffle', 'x')`, `coffers('Waffle', 'z')` | Centres of all full coffers of a waffle, across and in depth. Use both for one item in every coffer |
+| `coffers('Waffle', 'x')`, `coffers('Waffle', 'z')` | Centres of all full coffers of a waffle (square or round, with its `align`), across and in depth. Use both for one item in every coffer |
 | `coffers('Waffle', 'y')` | Height of the coffer tops (ceiling + depth), for fixtures inside the coffers |
 
 Examples:

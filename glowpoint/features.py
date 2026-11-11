@@ -76,37 +76,69 @@ def waffle_draw(cv, f, base):
     m = cv.m; s = m.surface(f.get("name", "Waffle")); W = cv.sid(s["name"])
     ids, P = cv.ids, cv.P; mask = ids == W
     (x0, x1), (z0, z1) = f["X"], f["Z"]
-    mod, rib, depth = f["module"], f["rib"], f["depth"]
+    mod, depth = f["module"], f["depth"]
+    shape = f.get("shape", "square")
     d = m.rays(ids.shape)
-    y0 = s["at"]; h = rib/2
+    y0 = s["at"]
     Q = P[mask]; D = d[mask]
-    u = (Q[:, 0]-x0)/mod; v = (z1-Q[:, 2])/mod; iu, iv = np.floor(u), np.floor(v)
-    fu, fv = (u-iu)*mod, (v-iv)*mod
-    on_rib = (fu < h) | (fu > mod-h) | (fv < h) | (fv > mod-h)
-    cx0 = x0+iu*mod+h; cx1 = x0+(iu+1)*mod-h; cz1 = z1-iv*mod-h; cz0 = z1-(iv+1)*mod+h
-    with np.errstate(divide="ignore", invalid="ignore"):
-        tt = depth/D[:, 1]
-        tx = np.where(D[:, 0] > 0, (cx1-Q[:, 0])/D[:, 0], np.where(D[:, 0] < 0, (cx0-Q[:, 0])/D[:, 0], np.inf))
-        tz = np.where(D[:, 2] > 0, (cz1-Q[:, 2])/D[:, 2], np.where(D[:, 2] < 0, (cz0-Q[:, 2])/D[:, 2], np.inf))
-    tmin = np.minimum(tt, np.minimum(tx, tz))
-    face = np.where(on_rib, 0, np.where(tmin == tt, 1, np.where(tmin == tx, 2, 3)))
-    hit = Q + np.where(on_rib, 0, tmin)[:, None]*D
-    cv.P[mask] = hit                                   # true 3D point: rib bottom, coffer top or coffer wall
+    nx, nz = int((x1-x0)/mod + 0.01), int((z1-z0)/mod + 0.01)          # full coffers across and deep
+    align = f.get("align", "start")
+    ox = ((x1-x0) - nx*mod)/2 if align == "centre" else 0.0           # start of the grid
+    oz = ((z1-z0) - nz*mod)/2 if align == "centre" else 0.0
+    u = (Q[:, 0]-x0-ox)/mod; v = (z1-oz-Q[:, 2])/mod; iu, iv = np.floor(u), np.floor(v)
+    partial = (iu < 0) | (iu >= nx) | (iv < 0) | (iv >= nz)          # cells that are not full coffers
+    if shape == "round":
+        r = f["d"]/2
+        if not 0 < 2*r < mod: raise ValueError(f"round coffers: d ({2*r:.3f} ft) must be smaller than the module ({mod:.3f} ft)")
+        ccx = x0 + ox + (iu+0.5)*mod; ccz = z1 - oz - (iv+0.5)*mod    # centre of each cell
+        dx_, dz_ = Q[:, 0]-ccx, Q[:, 2]-ccz
+        on_rib = (np.hypot(dx_, dz_) > r) | partial                    # a cut round coffer is left solid
+        with np.errstate(divide="ignore", invalid="ignore"):
+            tt = depth/D[:, 1]                                      # to the coffer top
+            a = D[:, 0]**2 + D[:, 2]**2; b = 2*(dx_*D[:, 0] + dz_*D[:, 2]); c = dx_**2 + dz_**2 - r*r
+            tw = (-b + np.sqrt(np.maximum(b*b - 4*a*c, 0)))/(2*a)    # to the round wall (we start inside)
+        tw = np.where(np.isfinite(tw) & (tw > 0), tw, np.inf)
+        tmin = np.minimum(tt, tw)
+        face = np.where(on_rib, 0, np.where(tmin == tt, 1, 2))
+        hit = Q + np.where(on_rib, 0, tmin)[:, None]*D
+        rr = np.hypot(hit[:, 0]-ccx, hit[:, 2]-ccz)
+        top_glow = 0.55 + 0.45*np.clip(1 - rr/r, 0, 1)
+        # walls: a little darker where the wall turns away from the camera
+        wnx, wnz = -(hit[:, 0]-ccx)/r, -(hit[:, 2]-ccz)/r
+        facing = np.clip(-(wnx*D[:, 0] + wnz*D[:, 2])/np.sqrt(np.maximum(a, 1e-12)), 0, 1)
+        wall_g = 0.7 + 0.25*facing
+        g = {1: top_glow, 2: wall_g, 3: wall_g}
+        cell_lab = (iu.astype(np.int64)*97 + iv.astype(np.int64)) % 100000
+    else:
+        rib = f["rib"]; h = rib/2
+        fu, fv = (u-iu)*mod, (v-iv)*mod
+        on_rib = (fu < h) | (fu > mod-h) | (fv < h) | (fv > mod-h)
+        if align == "centre": on_rib |= partial                        # centred grid: solid border
+        cx0 = x0+ox+iu*mod+h; cx1 = x0+ox+(iu+1)*mod-h; cz1 = z1-oz-iv*mod-h; cz0 = z1-oz-(iv+1)*mod+h
+        with np.errstate(divide="ignore", invalid="ignore"):
+            tt = depth/D[:, 1]
+            tx = np.where(D[:, 0] > 0, (cx1-Q[:, 0])/D[:, 0], np.where(D[:, 0] < 0, (cx0-Q[:, 0])/D[:, 0], np.inf))
+            tz = np.where(D[:, 2] > 0, (cz1-Q[:, 2])/D[:, 2], np.where(D[:, 2] < 0, (cz0-Q[:, 2])/D[:, 2], np.inf))
+        tmin = np.minimum(tt, np.minimum(tx, tz))
+        face = np.where(on_rib, 0, np.where(tmin == tt, 1, np.where(tmin == tx, 2, 3)))
+        hit = Q + np.where(on_rib, 0, tmin)[:, None]*D
+        gu = np.clip(1-np.abs(hit[:, 0]-(cx0+cx1)/2)/((cx1-cx0)/2), 0, 1)
+        gv = np.clip(1-np.abs(hit[:, 2]-(cz0+cz1)/2)/((cz1-cz0)/2), 0, 1)
+        g = {1: 0.55+0.45*np.sqrt(gu*gv), 2: np.full(len(Q), 0.85), 3: np.full(len(Q), 0.9)}
+        cell_lab = (iu.astype(np.int64)*97 + iv.astype(np.int64)) % 100000
+    cv.P[mask] = hit                                   # true 3D point: ceiling, coffer top or coffer wall
     cv.dep[mask] = m.depth(hit)
-    gu = np.clip(1-np.abs(hit[:, 0]-(cx0+cx1)/2)/((cx1-cx0)/2), 0, 1)
-    gv = np.clip(1-np.abs(hit[:, 2]-(cz0+cz1)/2)/((cz1-cz0)/2), 0, 1)
     over = base.copy(); sub = over[mask]
     cols = {1: GLOW, 2: (45, 165, 235), 3: (30, 130, 215)}
     lit = f.get("lit", True)
-    g = {1: 0.55+0.45*np.sqrt(gu*gv), 2: np.full(len(Q), 0.85), 3: np.full(len(Q), 0.9)}
     for k_, col in cols.items():
         k = face == k_
-        if not lit: col = (225, 225, 225)
+        if not lit: col = (228, 228, 228) if k_ == 1 else (200, 200, 200)
         for ch in range(3):
             sub[k, ch] = (sub[k, ch]*(1-g[k_][k]) + col[ch]*g[k_][k]).astype(np.uint8)
     over[mask] = sub
     lab = np.full(ids.shape, -1, np.int64)
-    lab[mask] = (face+1) + 7*((iu.astype(np.int64)*97 + iv.astype(np.int64)) % 100000)
+    lab[mask] = np.where(face == 0, 1, (face+1) + 7*cell_lab)      # the flat ceiling has no cell lines
     e = np.zeros(ids.shape, bool)
     e[:, 1:] |= lab[:, 1:] != lab[:, :-1]; e[1:, :] |= lab[1:, :] != lab[:-1, :]
     e &= mask | np.roll(mask, 1, 0) | np.roll(mask, 1, 1)
@@ -115,8 +147,9 @@ def waffle_draw(cv, f, base):
     edge = cv2.Canny(mask.astype(np.uint8)*255, 50, 150) > 0
     res[cv2.dilate(edge.astype(np.uint8), np.ones((2, 2), np.uint8)) > 0] = 0
     cv.report.append(dict(layer=f.get("layer", ""), type="waffle", surface=s["name"], x=round(x0, 2), y=round(y0, 2), z=round(z0, 2),
-                          note=f"X {x0:.2f}..{x1:.2f}, Z {z0:.2f}..{z1:.2f}, {round((x1-x0)/mod)} coffers across, "
-                               f"module {mod*12:.0f} in, rib {rib*12:.0f} in, depth {depth*12:.0f} in"))
+                          note=f"X {x0:.2f}..{x1:.2f}, Z {z0:.2f}..{z1:.2f}, {nx} x {nz} coffers, {shape}, align {align}, "
+                               f"module {mod*12:.1f} in, " + (f"diameter {f['d']*12:.1f} in" if shape == "round" else f"rib {f['rib']*12:.1f} in")
+                               + f", depth {depth*12:.1f} in"))
     return res
 
 

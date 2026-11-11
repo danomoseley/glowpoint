@@ -1,5 +1,5 @@
 layer,type,surface,x,y,z,visible,note
-Waffle coffers,waffle,Waffle,-5.32,24.36,5.08,,"X -5.32..18.01, Z 5.08..55.29, 14 coffers across, module 20 in, rib 4 in, depth 6 in"
+Waffle coffers,waffle,Waffle,-5.32,24.36,5.08,,"X -5.32..18.01, Z 5.08..55.29, 14 x 30 coffers, square, align start, module 20.0 in, rib 4.0 in, depth 6.0 in"
 Column uplights,uplight,Column L1 front,-11.57,0.0,50.15,True,
 Column uplights,uplight,Column L1 right,-7.82,0.0,53.89,True,
 Column uplights,uplight,Column R1 front,24.51,0.0,52.68,True,

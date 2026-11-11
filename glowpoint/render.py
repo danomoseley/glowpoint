@@ -24,7 +24,7 @@ GEOMETRY = {"waffle": (F.waffle_prepare, F.waffle_draw)}
 
 
 def evaluate(f, ns):
-    return {k: (ev(v, ns) if k not in ("layer", "type", "name", "note", "plane", "slot", "fixture", "surface_name") else v) for k, v in f.items()}
+    return {k: (ev(v, ns) if k not in ("layer", "type", "name", "note", "plane", "slot", "fixture", "surface_name", "shape", "align") else v) for k, v in f.items()}
 
 
 def legend(img, title, layers, at="bottom-left"):
@@ -154,8 +154,11 @@ def render(project, check=False, out_name="concept.png", design_file="design.jso
         """Centres of the full coffers of a waffle: axis 'x' or 'z' gives a list, 'y' the coffer top height."""
         if name not in waffles: raise KeyError(f"No waffle named '{name}'. Known: {sorted(waffles)}")
         w = waffles[name]; (x0, x1), (z0, z1) = w["X"], w["Z"]; mod = w["module"]
-        if axis == "x": return [x0 + (i+0.5)*mod for i in range(int((x1-x0)/mod + 0.01))]
-        if axis == "z": return [z1 - (j+0.5)*mod for j in range(int((z1-z0)/mod + 0.01))]
+        nx, nz = int((x1-x0)/mod + 0.01), int((z1-z0)/mod + 0.01)
+        ox = ((x1-x0) - nx*mod)/2 if w.get("align", "start") == "centre" else 0.0
+        oz = ((z1-z0) - nz*mod)/2 if w.get("align", "start") == "centre" else 0.0
+        if axis == "x": return [x0 + ox + (i+0.5)*mod for i in range(nx)]
+        if axis == "z": return [z1 - oz - (j+0.5)*mod for j in range(nz)]
         if axis == "y": return m.surface(w.get("plane", "Ceiling"))["at"] + w["depth"]
         raise ValueError("axis must be 'x', 'z' or 'y'")
     ns["coffers"] = coffers
