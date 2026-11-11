@@ -25,14 +25,27 @@ import cv2
 from .model import rotation, angles
 
 
+def _lsd(gray):
+    try:
+        return cv2.createLineSegmentDetector(0)
+    except Exception:          # some OpenCV versions do not have the LSD detector
+        return None
+
+
 def segments(gray, min_len=None):
     H, W = gray.shape
-    lsd = cv2.createLineSegmentDetector(0)
-    L = lsd.detect(cv2.GaussianBlur(gray, (3, 3), 0))[0]
+    min_len = min_len or 0.03*max(H, W)
+    blur = cv2.GaussianBlur(gray, (3, 3), 0)
+    lsd = _lsd(gray)
+    if lsd is not None:
+        L = lsd.detect(blur)[0]
+    else:                      # fallback: edges + probabilistic Hough transform
+        edges = cv2.Canny(blur, 50, 150)
+        L = cv2.HoughLinesP(edges, 0.5, np.pi/1800, threshold=30, minLineLength=int(min_len), maxLineGap=2)
     if L is None: return np.zeros((0, 4))
-    L = L.reshape(-1, 4)
+    L = L.reshape(-1, 4).astype(float)
     ln = np.hypot(L[:, 2]-L[:, 0], L[:, 3]-L[:, 1])
-    return L[ln > (min_len or 0.03*max(H, W))]
+    return L[ln > min_len]
 
 
 def _lines(S, scale, c):

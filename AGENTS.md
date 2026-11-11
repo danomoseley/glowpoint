@@ -16,7 +16,7 @@ glowpoint places lighting concepts on a perspective image of a space. The full r
 10. **Do not edit `projects/lobby` for experiments.** Copy it to `local/` first.
 11. **After a code change, run the tests:** `python3 tests/test_calibrate.py` and `python3 tests/test_render.py`.
 
-Run all commands from the repository root (`python3 -m glowpoint.<tool>`).
+Run all commands from the repository root (`python3 -m glowpoint.<tool>`). In a new environment, run `python3 -m glowpoint.doctor` first. If you cannot clone from GitHub (no internet), ask the user to upload the repository as a zip (GitHub: Code → Download ZIP).
 
 ## Task: change the lighting in an existing project
 

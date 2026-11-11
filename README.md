@@ -16,6 +16,7 @@ The output is diagrammatic, not photorealistic. It shows **what is lit and where
 
 - [Install](#install)
 - [Quick start](#quick-start)
+- [Sandboxes without internet (ChatGPT and others)](#sandboxes-without-internet-chatgpt-and-others)
 - [How it works](#how-it-works)
 - [Project folder](#project-folder)
 - [model.json: the 3D model](#modeljson-the-3d-model)
@@ -89,6 +90,27 @@ python3 -m glowpoint.render projects/lobby --camera door.json --out door.png
 ```
 
 `position` is in model feet. `yaw` 0 looks along +Z (into the original drawing), 90 looks along +X (to the right). `f` is the lens in pixels: for an image 1050 px wide, 626 px is an 80° field of view.
+
+## Sandboxes without internet (ChatGPT and others)
+
+Some chat assistants run code in a sandbox that cannot reach GitHub or install packages. Use glowpoint there like this:
+
+1. On GitHub, click **Code → Download ZIP**, and upload `glowpoint-main.zip` to the chat.
+2. Ask the assistant to unzip it and run `python3 -m glowpoint.doctor` from the `glowpoint-main` folder. It prints the Python, numpy, and OpenCV versions and `READY` or `NOT READY`. glowpoint needs only numpy and OpenCV, which most sandboxes already have.
+3. Then ask it to follow `AGENTS.md`.
+
+If the sandbox can run Python but not shell commands, use the functions directly:
+
+```python
+import sys; sys.path.insert(0, "glowpoint-main")
+from glowpoint.render import render
+render("glowpoint-main/projects/lobby", linework=True)          # same as: python3 -m glowpoint.render ... --linework
+
+from glowpoint import calibrate, measure, zoom                  # each tool has a main(); for example:
+measure.main(["glowpoint-main/projects/lobby", "floor", "302", "444"])
+```
+
+If OpenCV has no LSD line detector (some versions), the camera setup uses a Hough line detector instead. It is a little less accurate (lens within about 1 % on the test images, instead of 0.3 %). `glowpoint.doctor` tells you which one you have.
 
 ## How it works
 
