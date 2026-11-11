@@ -25,8 +25,16 @@ GEOMETRY = {"waffle": (F.waffle_prepare, F.waffle_draw)}
 GEOMETRY.update(ARCH.GEOMETRY)
 
 
+def _aperture(v, ns):
+    from .features import APERTURES
+    return v if isinstance(v, str) and v in APERTURES else ev(v, ns)
+
+
 def evaluate(f, ns):
-    return {k: (ev(v, ns) if k not in ("layer", "type", "name", "note", "plane", "slot", "fixture", "shape", "align", "kind", "direction", "color", "ceiling", "style", "top") else v) for k, v in f.items()}
+    if "aperture" in f:
+        f = dict(f); ap = _aperture(f.pop("aperture"), ns)
+        out = evaluate(f, ns); out["aperture"] = ap; return out
+    return {k: (ev(v, ns) if k not in ("layer", "type", "name", "note", "plane", "slot", "fixture", "shape", "align", "kind", "direction", "color", "ceiling", "style", "top", "mounting", "head") else v) for k, v in f.items()}
 
 
 def legend(img, title, layers, at="bottom-left"):

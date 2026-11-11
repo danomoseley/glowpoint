@@ -493,5 +493,141 @@ def linear_pendant(cv, f):
                note=f"{L:.1f} ft along {direction.upper()}")
 
 
+# ---------------------------------------------------------------- track lighting
+MM = 1/304.8                                               # millimetres to feet
+APERTURES = {                                              # track head diameters, from manufacturers' specs
+    "XS": 32*MM, "S": 60*MM, "M": 92*MM, "L": 129*MM,      # ERCO Parscan sizes
+    "2.5in": 2.5/12, "3in": 3/12, "3.75in": 3.75/12,       # Solais Xd20, Xd24, Xd30
+    "2in": 2/12, "4in": 4/12,
+}
+HOUSING = {"white": (238, 238, 238), "black": (45, 45, 45), "silver": (195, 195, 195)}
+
+
+def _ray_hit(m, o, d):
+    """Nearest surface hit of one ray (origin o, direction d), honouring holes. Returns the point or None."""
+    best, hit = np.inf, None
+    for s in m.surfaces:
+        a = s["axis"]
+        if abs(d[a]) < 1e-9: continue
+        t = (s["at"] - o[a]) / d[a]
+        if t <= 1e-6 or t >= best: continue
+        q = o + t*d; ok = True
+        for k, key in enumerate("XYZ"):
+            if k == a: continue
+            lo, hi = s[key]
+            if not (lo - 1e-6 <= q[k] <= hi + 1e-6): ok = False; break
+        if ok:
+            for hole in s.get("holes", []):
+                if all(lo < q["XYZ".index(key)] < hi for key, (lo, hi) in hole.items()): ok = False; break
+        if ok: best, hit = t, q
+    return hit
+
+
+def track(cv, f):
+    """A track with heads. Mounting: surface (profile below the ceiling), recessed (flush channel with a trim
+    flange), trimless (flush channel, no trim), suspended (profile hanging on cables)."""
+    m = cv.m
+    s = m.surface(f["plane"]) if "plane" in f else None
+    yt = f["from_y"] if "from_y" in f else s["at"]
+    mounting = f.get("mounting", "surface")
+    direction = f.get("direction", "z"); ai = 2 if direction == "z" else 0; bi = 0 if direction == "z" else 2
+    u0, u1 = f["range"]; pw = f.get("profile_w", 36*MM); ph = f.get("profile_h", 30*MM)
+    col = HOUSING.get(f.get("color", "white"), HOUSING["white"]) if isinstance(f.get("color", "white"), str) else tuple(f["color"][::-1])
+    ap = f.get("aperture", "S"); dia = APERTURES[ap] if isinstance(ap, str) else float(ap)
+    head = f.get("head", "cylinder"); hl = f.get("head_l", 1.6*dia)
+    tilt, pan = np.radians(f.get("tilt", 0)), np.radians(f.get("pan", 0))
+    beam = np.radians(f.get("beam", 25)); pool = f.get("pool", 0.5)
+    n_heads_total = 0
+    for at in as_list(f["at"]):
+        def P3(u, du=0.0, y=None):
+            q = [0.0, 0.0, 0.0]; q[ai] = u; q[bi] = at + du; q[1] = yt if y is None else y; return q
+        # ---- the track itself
+        if mounting in ("surface", "suspended"):
+            ytop = yt if mounting == "surface" else yt - f.get("drop", 3.0)
+            ybot = ytop - ph
+            # draw the profile in short pieces, so that a run that passes behind the camera or behind a
+            # column still shows where it is visible
+            edges = np.arange(u0, u1, f.get("piece", 1.0)).tolist() + [u1]
+            for ua, ub in zip(edges[:-1], edges[1:]):
+                corners = [P3(u, du, y) for u in (ua, ub) for du in (-pw/2, pw/2) for y in (ytop, ybot)]
+                if np.any(m.depth(corners) <= 0.05): continue
+                pix = m.project(corners); vis = cv.visible(corners, pix)
+                if vis.mean() < 0.5: continue
+                hull = cv2.convexHull(np.float32(pix)).astype(np.int32)
+                cv2.fillPoly(cv.img, [hull], col, cv2.LINE_AA)
+            # outline along the bottom edges of the profile
+            for du in (-pw/2, pw/2):
+                cv.seg(P3(u0, du, ybot), P3(u1, du, ybot), 1, n=400)
+            if mounting == "suspended":
+                n = max(2, int((u1 - u0)/f.get("cable_spacing", 8.0)) + 1)
+                for u in np.linspace(u0 + 0.5, u1 - 0.5, n):
+                    cv.seg(P3(u, 0, ytop), P3(u, 0, yt), 1)
+            mount_y = ybot
+        else:                                              # recessed / trimless: flush with the surface
+            if s is None: raise ValueError("recessed or trimless track needs 'plane'")
+            i = cv.sid(f["plane"]); P = cv.P
+            on = (cv.ids == i) & (P[..., ai] >= u0) & (P[..., ai] <= u1)
+            dperp = np.abs(P[..., bi] - at)
+            gy, gx = np.gradient(P[..., bi]); px = np.hypot(gx, gy)
+            chan = on & (dperp <= np.maximum(pw/2, 0.6*px))
+            cv.img[chan] = (35, 35, 35)
+            if mounting == "recessed":                     # visible trim flange around the channel
+                fl = f.get("flange", 12*MM)
+                trim = on & ~chan & (dperp <= pw/2 + fl)
+                cv.img[trim] = col if col != HOUSING["black"] else (90, 90, 90)
+                for du in (-(pw/2 + fl), pw/2 + fl):
+                    cv.seg(P3(u0, du), P3(u1, du), 1)
+            mount_y = yt
+        # ---- heads
+        if "count" in f:
+            n = int(f["count"]); us = [u0 + (u1-u0)*(k+0.5)/n for k in range(n)]
+        else:
+            sp = f.get("spacing", 4.0); us = list(np.arange(u0 + sp/2, u1 - sp/2 + 1e-6, sp))
+        for u in us:
+            pivot = np.array(P3(u, 0, mount_y - (0 if head == "flush" else f.get("stem", 0.12))))
+            # aim: straight down, tilted by 'tilt' towards the 'pan' direction (pan 0 = across the track, +)
+            dirv = np.zeros(3); dirv[1] = -np.cos(tilt)
+            dirv[bi] = np.sin(tilt)*np.cos(pan); dirv[ai] = np.sin(tilt)*np.sin(pan)
+            if head == "flush":
+                front = pivot + dirv*0.01
+            else:
+                front = pivot + dirv*hl
+                cv.seg(P3(u, 0, mount_y), pivot.tolist(), 1)
+            # rings at the back and front of the head, perpendicular to the aim
+            tmp = np.array([1.0, 0, 0]) if abs(dirv[0]) < 0.9 else np.array([0, 0, 1.0])
+            e1 = np.cross(dirv, tmp); e1 /= np.linalg.norm(e1); e2 = np.cross(dirv, e1)
+            th = np.linspace(0, 2*np.pi, 40, endpoint=False)
+            ring = lambda c, r: [(c + r*(np.cos(t)*e1 + np.sin(t)*e2)).tolist() for t in th]
+            back, frontr, apr = ring(pivot, dia/2), ring(front, dia/2), ring(front, dia/2*0.78)
+            allp = back + frontr
+            pix = m.project(allp)
+            if not np.all(np.isfinite(pix)) or cv.visible(allp, pix).mean() < 0.4:
+                cv.add(f, "track head", f.get("plane", "y=%g" % yt), front.tolist(), visible=False,
+                       note=f"{ap if isinstance(ap, str) else round(dia*12, 2)} ({dia*12:.2f} in) {head}, {mounting} track"); n_heads_total += 1; continue
+            # beam pool where the aim ray lands
+            if pool > 0:
+                hit = _ray_hit(m, front, dirv)
+                if hit is not None:
+                    dist = np.linalg.norm(hit - front); r = dist*np.tan(beam/2) + dia/2
+                    d3 = np.linalg.norm(cv.P - hit, axis=-1)
+                    g = pool*np.exp(-(d3/r)**4)
+                    cv.glow((cv.ids >= 0) & (d3 < 1.6*r), g)
+            if head != "flush":
+                hull = cv2.convexHull(np.float32(pix)).astype(np.int32)
+                cv2.fillPoly(cv.img, [hull], col, cv2.LINE_AA)
+                cv2.polylines(cv.img, [hull], True, (30, 30, 30), 1, cv2.LINE_AA)
+            # the aperture, if it faces the camera
+            to_cam = m.C - front
+            if np.dot(to_cam, dirv) > 0:
+                fp = np.int32(m.project(frontr)); apix = np.int32(m.project(apr))
+                cv2.fillPoly(cv.img, [fp], (30, 30, 30) if head != "flush" else col, cv2.LINE_AA)
+                cv2.fillPoly(cv.img, [apix], (165, 238, 255), cv2.LINE_AA)
+            cv.add(f, "track head", f.get("plane", "y=%g" % yt), front.tolist(), visible=True,
+                   note=f"{ap if isinstance(ap, str) else round(dia*12, 2)} ({dia*12:.2f} in) {head}, {mounting} track")
+            n_heads_total += 1
+    cv.add(f, "track", f.get("plane", "y=%g" % yt), [0.0, yt, 0.0], visible=True,
+           note=f"{mounting}, {len(as_list(f['at']))} run(s) along {direction.upper()}, {u1-u0:.1f} ft, {n_heads_total} heads")
+
+
 LIGHTS = dict(downlight=downlight, sconce=sconce, uplight=uplight, wash=wash, pendant=pendant, fixture=fixture,
-              luminous=luminous, slots=slots, linear_pendant=linear_pendant)
+              luminous=luminous, slots=slots, linear_pendant=linear_pendant, track=track)

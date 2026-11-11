@@ -150,6 +150,21 @@ def main(update=False):
     print(f"{'PASS' if good else 'FAIL'}  perimeter cove, slots, light wells, linear pendants: "
           f"{len(cv_)} cove, {len(sl)} slot fields, {len(wl)} wells, {len(lp)} linear pendants")
     ok &= good
+    # 9. track lighting: four mountings, aperture names and sizes, head counts
+    d4 = json.load(open(os.path.join(proj, "design.json")))
+    d4["layers"].append({"name": "Track", "features": [
+        {"type": "track", "plane": "Ceiling", "mounting": "surface", "at": 34, "range": [30, 105], "aperture": "M", "spacing": 6, "tilt": 30},
+        {"type": "track", "plane": "Ceiling", "mounting": "recessed", "at": 29, "range": [30, 105], "aperture": "S", "spacing": 5},
+        {"type": "track", "plane": "Left soffit", "mounting": "trimless", "at": -21.5, "range": [56, 110], "aperture": "XS", "head": "flush", "count": 6},
+        {"type": "track", "plane": "Ceiling", "mounting": "suspended", "at": [4, 9], "range": [60, 106], "drop": 4, "aperture": "inch(3)", "spacing": 7}]})
+    json.dump(d4, open(os.path.join(proj, "design.track.json"), "w"))
+    rep = render(proj, linework=True, out_name="track.png", design_file="design.track.json")
+    tracks = [r for r in rep if r["type"] == "track"]; heads = [r for r in rep if r["type"] == "track head"]
+    sizes = {r["note"].split(")")[0] + ")" for r in heads}
+    good = (len(tracks) == 4 and len(heads) == 12 + 15 + 6 + 12
+            and any(n.startswith("M (3.62 in)") for n in sizes) and any(n.startswith("3.0 (3.00 in)") for n in sizes))
+    print(f"{'PASS' if good else 'FAIL'}  track lighting: {len(tracks)} tracks, {len(heads)} heads (expected 45), sizes {sorted(sizes)}")
+    ok &= good
     return ok
 
 

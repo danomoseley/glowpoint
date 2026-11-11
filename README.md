@@ -230,6 +230,7 @@ glowpoint warns when two fixtures from different layers are at the same place (f
 | [`wash`](#wash) | Wall wash from the top of a wall, optionally from a ceiling slot |
 | [`pendant`](#pendant) | Pendant on a cord, from a ceiling or from inside coffers |
 | [`fixture`](#fixture) | A specific fixture, drawn from its parts (trim, lens, rings, slots) |
+| [`track`](#track) | Track lighting: surface, recessed (with trim), trimless, or suspended track, with aimable heads in set aperture sizes |
 | [`slots`](#slots) | Narrow recessed lines in a ceiling: lit slots or track channels with spot heads, as lines or a grid |
 | [`linear_pendant`](#linear_pendant) | Suspended linear fixture with direct light down and indirect light up onto the ceiling |
 | [`luminous`](#luminous) | A glowing ceiling or wall area (luminous ceiling, backlit stretch ceiling), with optional panel joints |
@@ -350,6 +351,63 @@ Parts are drawn in order, so later parts are on top. All sizes in feet.
 ![A 12 in round fixture in every coffer, seen from below](docs/coffer-fixtures.png)
 
 To describe a fixture from a photo or a spec sheet: start with the outer trim (`fill` + `line`), then the lens or aperture (`fill`, `lit`), then details (`line` rings, `slots`). Use the real dimensions from the spec sheet.
+
+### `track`
+Track lighting: a track profile along a line, with heads that you can aim. Four mounting types, as offered by architectural track makers (for example ERCO, Stucchi, Flos, iGuzzini):
+
+| `mounting` | What it is |
+|---|---|
+| `surface` | The profile is fixed below the ceiling |
+| `recessed` | The profile is set into the ceiling, flush, with a visible trim flange |
+| `trimless` | The profile is plastered into the ceiling, flush, with no trim: only a dark slot shows |
+| `suspended` | The profile hangs below the ceiling on cables |
+
+```json
+{"type": "track", "plane": "Ceiling", "mounting": "surface", "direction": "z", "at": 34, "range": [30, 105],
+ "aperture": "M", "spacing": 6, "tilt": 30, "pan": 0, "beam": 25, "color": "white"}
+```
+
+**Aperture sizes.** `aperture` is a size name or a diameter in feet (for example `"inch(3)"`). The names come from manufacturers' specifications:
+
+| Name | Diameter | Source |
+|---|---|---|
+| `XS` | 32 mm (1¼ in) | ERCO Parscan XS |
+| `S` | 60 mm (2⅜ in) | ERCO Parscan S |
+| `M` | 92 mm (3⅝ in) | ERCO Parscan M |
+| `L` | 129 mm (5⅛ in) | ERCO Parscan L |
+| `2.5in`, `3in`, `3.75in` | 2.5, 3, 3.75 in | Solais Xd20, Xd24, Xd30 |
+| `2in`, `4in` | 2, 4 in | Common track head sizes |
+
+Add more sizes in `APERTURES` in `glowpoint/features.py`, or give the diameter directly.
+
+| Key | Default | Meaning |
+|---|---|---|
+| `plane` | | Surface the track is on (or `from_y` for a height, for example `coffers('Waffle', 'y')`; only `surface` and `suspended` tracks) |
+| `from_y` | | Instead of `plane`: the height of the track's top |
+| `mounting` | `surface` | `surface`, `recessed`, `trimless`, or `suspended` |
+| `direction` | `z` | The direction the track runs: `z` or `x` |
+| `at` | | Position across the track, ft. A list makes several parallel runs |
+| `range` | | (start, end) along the track, ft |
+| `profile_w`, `profile_h` | 36 mm, 30 mm | Width and height of the track profile, ft |
+| `flange` | 12 mm | `recessed`: width of the trim flange on each side, ft |
+| `drop` | 3.0 | `suspended`: distance from the ceiling to the top of the track, ft |
+| `cable_spacing` | 8.0 | `suspended`: distance between cables, ft |
+| `piece` | 1.0 | `surface`/`suspended`: the profile is drawn in pieces of this length, ft, so a run partly behind a column or the camera still shows |
+| `spacing` | 4.0 | Distance between heads, ft (or use `count`) |
+| `count` | | Number of heads, equally spaced, half a space at each end |
+| `aperture` | `S` | Head size: a name from the table above, or a diameter in ft |
+| `head` | `cylinder` | `cylinder` (adjustable spotlight) or `flush` (a low head that sits in the track, like ERCO InTrack) |
+| `head_l` | 1.6 × diameter | Length of a cylinder head, ft |
+| `stem` | 0.12 | Length of the adapter between the track and a cylinder head, ft |
+| `tilt` | 0 | Aim: degrees from straight down |
+| `pan` | 0 | Aim direction for the tilt, degrees: 0 = across the track toward +X (or +Z for tracks along X), 180 = the other way, 90 = along the track |
+| `beam` | 25 | Beam angle, degrees. Sets the size of the light pool where the aim lands |
+| `pool` | 0.5 | Brightness of the light pool, 0 to 1 (0 = none) |
+| `color` | `white` | Housing: `white`, `black`, `silver`, or `[R, G, B]` |
+
+`positions.csv` has one row for each head (`track head`, with its size in inches) and one row for each track.
+
+![Suspended track with L heads (left), surface track with M heads aimed at the wall (right), and a recessed track](docs/track-lighting.png)
 
 ### `slots`
 Narrow recessed lines in a surface: lit slots (a lens flush with the ceiling) or track channels with spot heads, as single lines, parallel lines, or a grid.
@@ -556,7 +614,7 @@ Examples:
 
 Expressions run in a restricted Python evaluator with only these names (and Python arithmetic, lists, and slices).
 
-**Text that is not an expression.** These keys always hold plain text and are never evaluated: `layer`, `type`, `name`, `note`, `plane`, `slot`, `fixture`, `shape`, `align`, `kind`, `direction`, `color`, `ceiling`, `style`, `top`. Every other text value is an expression, so a new text option in a plugin must be added to that list in `glowpoint/render.py`, or a word such as `round` is read as a Python name.
+**Text that is not an expression.** These keys always hold plain text and are never evaluated: `layer`, `type`, `name`, `note`, `plane`, `slot`, `fixture`, `shape`, `align`, `kind`, `direction`, `color`, `ceiling`, `style`, `top`, `mounting`, `head`. `aperture` is plain text when it is a size name (`S`), and an expression otherwise (`inch(3)`). Every other text value is an expression, so a new text option in a plugin must be added to that list in `glowpoint/render.py`, or a word such as `round` is read as a Python name.
 
 ## Outputs
 
