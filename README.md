@@ -2,7 +2,7 @@
 
 Put lighting concepts on an architect's perspective drawing, placed accurately in 3D.
 
-You start with a black-and-white perspective sketch of a space. glowpoint builds a simple 3D model behind the drawing (the camera, the floor, the walls, the ceiling, the columns). Then you describe the lighting in a design file, for example "three downlights equally spaced above the desk" or "an uplight on every visible column face". glowpoint calculates the exact positions and draws the light on the original drawing, in the correct perspective.
+You start with a perspective image of a space: a render from 3D software or a hand sketch, in one-, two- or three-point perspective. glowpoint builds a simple 3D model behind the drawing (the camera, the floor, the walls, the ceiling, the columns). Then you describe the lighting in a design file, for example "three downlights equally spaced above the desk" or "an uplight on every visible column face". glowpoint calculates the exact positions and draws the light on the original drawing, in the correct perspective.
 
 The output is diagrammatic, not photorealistic. It shows **what is lit and where the light comes from**, for a design review with the architect.
 
@@ -57,15 +57,25 @@ This writes:
 
 To change the lighting, edit `design.json` and run the same command again.
 
+To see the same design from another position (for example from a doorway), give a camera. The model is drawn as linework, because the architect's image only fits its own camera:
+
+```bash
+python3 -m glowpoint.render projects/lobby --camera door.json --out door.png
+```
+
+```json
+{"f": 626, "principal": [525, 350], "position": [-24.4, 5.5, 31.0], "yaw": 65, "pitch": 0, "roll": 0}
+```
+
 ## How it works
 
-1. **Camera.** The drawing is a one-point perspective. The vanishing point, the lens (in pixels), and the eye height define the camera.
+1. **Camera.** The setup tool finds the camera from the vanishing points in the image: the lens, the turn, the tilt, and the roll. One known dimension sets the scale.
 2. **Model.** The space is a set of flat rectangles (floor, walls, ceiling, soffits) and boxes (columns, desks). All sizes are in feet.
 3. **Ray casting.** For each pixel of the drawing, glowpoint finds which surface the pixel shows and the 3D point on it. This gives exact perspective and correct hiding: a light behind a column does not show.
 4. **Design.** Each light is placed on a named surface. Its position is a relationship to the model ("centered between Column L1 and Column R1"), not a fixed number. When the model changes, the lights follow.
 5. **Drawing.** Light is drawn as a soft warm glow over the original linework, so the architect's drawing stays readable.
 
-Coordinates: **X** to the right, **Y** up (floor = 0), **Z** away from the viewer. The camera is at X = 0, Z = 0.
+Coordinates: **X** to the right, **Y** up (floor = 0), **Z** away from the viewer, in feet. The camera stands at X = 0, Z = 0.
 
 ## Project folder
 
@@ -100,11 +110,28 @@ One folder for each drawing. To start a new project, copy a folder, replace the 
 }
 ```
 
+The camera has two forms.
+
+**General** (two- and three-point images; what `glowpoint.calibrate` writes):
+
+```json
+"camera": {"f": 651.3, "principal": [526.8, 350.3], "position": [0, 5.5, 0], "yaw": 25.1, "pitch": 12.0, "roll": 0.0}
+```
+
+**One-point** (the camera looks straight along +Z):
+
+```json
+"camera": {"vp": [543, 345], "f": 550, "eye_height": 9.388}
+```
+
 | Field | Meaning |
 |---|---|
-| `camera.vp` | Vanishing point in drawing pixels |
 | `camera.f` | Lens, in pixels (distance from the eye to the picture plane) |
-| `camera.eye_height` | Height of the eye above the floor, in feet |
+| `camera.principal` | The point in the image straight in front of the camera, in pixels (usually the image centre) |
+| `camera.position` | Eye position in feet. Usually `[0, eye height, 0]` |
+| `camera.yaw`, `pitch`, `roll` | Turn to the right, tilt up, and roll, in degrees |
+| `camera.vp` | One-point form: the vanishing point in pixels |
+| `camera.eye_height` | One-point form: height of the eye above the floor, in feet |
 | `surfaces[].axis` | The axis the surface is perpendicular to. `Y` = floor, ceiling, soffit. `X` = left or right wall. `Z` = back wall |
 | `surfaces[].at` | Position of the surface on that axis |
 | `surfaces[].X/Y/Z` | Size of the surface on the other two axes |
@@ -241,16 +268,59 @@ Expressions run in a restricted Python evaluator with only these names. Plain na
 
 ## Setting up a new drawing
 
-The setup is partly manual for now. It takes about 15 minutes for a clean drawing.
+### 1. Find the camera
 
-1. **Vanishing point.** Find where the lines that go away from the viewer meet (floor joints, wall bases, ceiling lines). An OpenCV line detector (`cv2.createLineSegmentDetector`) and a RANSAC fit find it well on clean line drawings.
-2. **Eye height.** For a person standing on the floor, `eye_height / person_height = (y_feet − y_vp) / (y_feet − y_head)` in pixels. Use the known height of the people in the drawing (or any known vertical dimension).
-3. **Lens.** Use something square in plan (a column, a floor tile) or two known depths. For hand drawings, average several measurements.
-4. **Surfaces.** A point on the floor at pixel (x, y) is at `Z = f·h/(y − y_vp)`, `X = (x − x_vp)·h/(y − y_vp)`. Measure wall bases, column bases, and the far end. For heights, `Y = h + (y_vp − y)·Z/f`.
-5. **Check.** Run with `--check`. If a grid does not follow the drawing, correct that surface and run again.
-6. **Ask for one real dimension** (for example the ceiling height) when you can, and scale the model to it.
+```bash
+python3 -m glowpoint.calibrate projects/new/drawing.png --known 640,520,640,388,10
+```
+
+The tool finds the straight lines, groups them by vanishing point, and calculates the camera. `--known x1,y1,x2,y2,H` gives the scale: pixel (x1, y1) is on the floor, pixel (x2, y2) is straight above it, and they are H feet apart (a door frame, a column joint, a person). Or give `--eye-height`.
+
+It prints a report and writes `camera.json` (paste it into `model.json` as `"camera"`) and `calibration.png` (each group of lines in one color):
+
+```
+282 line segments, 3 vanishing points, three-point perspective
+  VP1: 146 lines, fit 0.26 deg rms, at (1947, 488) px, horizontal
+  VP2: 82 lines, fit 0.39 deg rms, at (215, 489) px, horizontal
+  VP3: 23 lines, fit 0.12 deg rms, at (526, -2708) px, vertical
+  lens f = 651.3 px  (horizontal field of view 77.7 deg)
+  turn (yaw) 25.13 deg, tilt (pitch) 12.02 deg, roll 0.02 deg
+  angles between the found directions (90 = perfect): 90.00, 90.00, 90.00
+```
+
+How to read it:
+
+- **fit** — how well the lines meet at each vanishing point. Renders: below 0.5°. Hand drawings: 1° to 3° (use `--tol 2`).
+- **angles between the found directions** — the room's main directions must be 90° apart. More than 1° from 90 means a wrong line group or a non-square room. Look at `calibration.png`.
+- **one-point** images: the lens cannot be found from lines alone. Give `--f`, or calculate it from something square (see below).
+
+The world frame: the origin is on the floor below the camera, Y is up, Z is the room direction most in front of the camera, and X is to its right.
+
+### 2. Build the surfaces
+
+Measure the room in feet with the measure tool, then write the surfaces and boxes in `model.json`:
+
+```bash
+python3 -m glowpoint.measure projects/new floor 302 444          # floor point:  X -22.85  Z 52.16
+python3 -m glowpoint.measure projects/new height 203 492 203 441 # height above a floor point: 3.26 ft
+python3 -m glowpoint.measure projects/new plane 760 182 Y 24.36  # point on the plane Y = 24.36 (a ceiling)
+```
+
+Typical steps: the floor; a wall from two points on its base line; the ceiling height from a column joint or a wall top; each column from its base corners and its height.
+
+### 3. Check
+
+Run `python3 -m glowpoint.render projects/new --check` and look at `out/check.png`. Each surface must follow the lines of the image. If one does not, measure it again.
+
+### One-point images and hand drawings
+
+For a one-point image, set the lens from something square in plan, for example a column: if its front corner is at pixel x1 and its back corner (same side) at x2, and the front face is w pixels wide, then `f = w / ((x1 − vp_x)/(x2 − vp_x) − 1)`. Average several measurements on a hand drawing.
 
 Hand drawings are not exact. Match the model to the drawing, not to an ideal grid.
+
+### Test
+
+`python3 tests/test_calibrate.py` renders the lobby model from known cameras (two- and three-point, with tilt and roll), runs the setup on each image, and compares the result with the true camera. Current results: lens within 0.3 %, angles within 0.15°, scale within 1 %.
 
 ## Adding your own types (plugins)
 
@@ -325,6 +395,7 @@ glowpoint is designed so that an agent can take a request in plain words and pla
 - **Only edit `design.json` for design changes** and `model.json` for geometry changes. Keep the code generic.
 - **For a new kind of light, write a plugin** in `<project>/types/` (start from `examples/types/pendant.py`). Do not change `glowpoint/` for one project.
 - **Keep user projects out of the repo.** Put them in `local/` or outside the clone.
+- **Set up a new image with the tools:** `glowpoint.calibrate` for the camera, `glowpoint.measure` for every surface. Do not estimate positions by eye.
 - **Coordinates:** X right, Y up, Z away from the viewer, feet. Horizontal surfaces use (x, z). Walls use (along, y).
 
 Typical request to design file:
@@ -339,14 +410,13 @@ Typical request to design file:
 
 ## Limits
 
-- One-point perspective only. Verticals must be vertical and the main lines must meet at one vanishing point.
+- The room must have mostly square corners (two main horizontal directions at 90°). Angled walls can be added as boxes or surfaces, but they cannot set the camera.
 - Surfaces are flat rectangles that line up with the axes. No curved or sloped surfaces yet.
 - The model only knows what the drawing shows. Areas outside the drawing are guesses.
-- The camera setup is manual (see above).
+- After the camera setup, the surfaces are measured by hand with the measure tool.
 
 ## Roadmap
 
-- A setup tool that calculates the camera from measured points and reports how well they agree.
-- One renderer for the original view and for new camera positions (the lights in new views too).
+- Automatic surfaces: find the floor, wall, and ceiling planes from the line groups.
 - Design options (A, B, C) in one design file, and a style file for colors, line weights, and labels.
 - A review PDF, and 3D export (OBJ, DXF) for SketchUp, Rhino, and Revit.

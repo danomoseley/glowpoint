@@ -5,6 +5,10 @@ Reads   <project>/model.json   the 3D model behind the drawing
 Writes  <project>/out/concept.png    the drawing with the lighting
         <project>/out/check.png      the model on the drawing, with a grid (with --check)
         <project>/out/positions.csv  every light, with its surface and X/Y/Z in feet
+
+Other views:  --camera view.json   use a different camera (see model.json "camera"); the model is drawn
+                                   as linework because the architect's drawing only fits its own camera
+              --linework           draw the model as linework even with the original camera
 """
 import argparse, csv, json, os
 import numpy as np
@@ -13,6 +17,7 @@ from .model import Model
 from .expr import namespace, ev
 from . import features as F
 from . import plugins
+from . import linework as LW
 
 GEOMETRY = {"waffle": (F.waffle_prepare, F.waffle_draw)}
 
@@ -67,11 +72,20 @@ def check_image(m, base, step=4.0):
     return out
 
 
-def render(project, check=False, out_name="concept.png", design_file="design.json"):
+def render(project, check=False, out_name="concept.png", design_file="design.json", camera=None, linework=False,
+           size=None):
     m = Model(project)
     design = json.load(open(os.path.join(project, design_file)))
-    base = cv2.imread(m.drawing)
-    if base is None: raise FileNotFoundError(m.drawing)
+    base = None if (camera or linework) else cv2.imread(m.drawing)
+    # "visible" in the design always means visible in the architect's drawing, whatever view is rendered
+    ref = cv2.imread(m.drawing); ref_shape = ref.shape[:2] if ref is not None else (700, 1050)
+    ref_ids = m.raycast(ref_shape)[0]
+    if camera:
+        m.set_camera(camera)
+    if base is None:
+        if not (camera or linework): raise FileNotFoundError(m.drawing)
+        shape = tuple(size) if size else ref_shape
+        base = LW.draw(m, shape)
     os.makedirs(os.path.join(project, "out"), exist_ok=True)
     if check:
         cv2.imwrite(os.path.join(project, "out", "check.png"), check_image(m, base))
@@ -92,7 +106,7 @@ def render(project, check=False, out_name="concept.png", design_file="design.jso
         base = geometry[fe["type"]][1](cv, fe, base)
     cv.img = base.copy(); cv.over = base.copy()
     # 2. lights: may refer to what is visible
-    vis = [(s, int((cv.ids == i).sum())) for i, s in enumerate(m.surfaces)]
+    vis = [(s, int((ref_ids == i).sum())) if i < ref_ids.max()+1 else (s, 0) for i, s in enumerate(m.surfaces)]
     ns = namespace(m, visible=vis); ns.update(extra())
     for L in layers:
         for f in L["features"]:
@@ -117,6 +131,9 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("project"); ap.add_argument("--check", action="store_true", help="also write out/check.png")
     ap.add_argument("--design", default="design.json"); ap.add_argument("--out", default="concept.png")
+    ap.add_argument("--camera", help="JSON file with a camera, for a new view")
+    ap.add_argument("--linework", action="store_true", help="draw the model as linework, not on the drawing")
     a = ap.parse_args()
-    rep = render(a.project, a.check, a.out, a.design)
+    cam = json.load(open(a.camera)) if a.camera else None
+    rep = render(a.project, a.check, a.out, a.design, cam, a.linework)
     print(f"{len(rep)} items -> {os.path.join(a.project, 'out', a.out)}")

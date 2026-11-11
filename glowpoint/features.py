@@ -30,9 +30,11 @@ class Canvas:
 
     def visible(self, pts3, pix):
         H, W = self.dep.shape; ok = []
-        for P, (x, y) in zip(pts3, pix):
+        dz = self.m.depth(pts3) if len(pts3) else []
+        for P, (x, y), z in zip(pts3, pix, dz):
+            if not (np.isfinite(x) and np.isfinite(y)) or z <= 0: ok.append(False); continue
             xi, yi = int(round(x)), int(round(y))
-            ok.append(0 <= xi < W and 0 <= yi < H and P[2] <= self.dep[yi, xi] + 0.3)
+            ok.append(0 <= xi < W and 0 <= yi < H and z <= self.dep[yi, xi] + 0.3)
         return np.array(ok)
 
     def glow(self, mask, g, col=GLOW):
@@ -84,7 +86,7 @@ def waffle_draw(cv, f, base):
     with np.errstate(divide="ignore", invalid="ignore"):
         tt = depth/D[:, 1]
         tx = np.where(D[:, 0] > 0, (cx1-Q[:, 0])/D[:, 0], np.where(D[:, 0] < 0, (cx0-Q[:, 0])/D[:, 0], np.inf))
-        tz = (cz1-Q[:, 2])/D[:, 2]
+        tz = np.where(D[:, 2] > 0, (cz1-Q[:, 2])/D[:, 2], np.where(D[:, 2] < 0, (cz0-Q[:, 2])/D[:, 2], np.inf))
     tmin = np.minimum(tt, np.minimum(tx, tz))
     face = np.where(on_rib, 0, np.where(tmin == tt, 1, np.where(tmin == tx, 2, 3)))
     hit = Q + np.where(on_rib, 0, tmin)[:, None]*D
