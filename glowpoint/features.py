@@ -236,11 +236,14 @@ def wash(cv, f):
 
 
 def pendant(cv, f):
-    """A pendant hanging from a horizontal surface. Height: "y" (bottom of the shade above the floor)
-    or "drop" (from the ceiling to the bottom of the shade)."""
-    m = cv.m; s = m.surface(f["plane"])
+    """A pendant hanging from a horizontal surface ("plane") or from a height ("from_y", for example the top
+    of the coffers). Height: "y" (bottom of the shade above the floor) or "drop" (from the cord start to the
+    bottom of the shade)."""
+    m = cv.m
+    s = m.surface(f["plane"]) if "plane" in f else None
+    if s is None and "from_y" not in f: raise ValueError("pendant needs 'plane' or 'from_y'")
     for x, z in itertools.product(as_list(f["x"]), as_list(f["z"])):
-        top = m.to3d(s, x, z)
+        top = [x, f["from_y"], z] if "from_y" in f else m.to3d(s, x, z)     # where the cord starts
         y = f["y"] if "y" in f else top[1] - f.get("drop", 10.0)
         r = f.get("d", 1.5)/2; hgt = f.get("h", 0.6)
         th = np.linspace(0, 2*np.pi, 48, endpoint=False)
@@ -250,7 +253,7 @@ def pendant(cv, f):
         shade = bottom + upper
         sp = m.project(shade); vis = cv.visible(shade, sp)
         if vis.mean() < 0.5:
-            cv.add(f, "pendant", f["plane"], [x, y, z], visible=False); continue
+            cv.add(f, "pendant", f.get("plane", "y=%g" % top[1]), [x, y, z], visible=False); continue
         pc = m.project([c])[0]; halo = max(5, int(m.f*r*2.2/max(m.depth([c])[0], 0.1)))
         cv2.circle(cv.over, tuple(np.int32(pc)), halo, (120, 230, 255), -1, cv2.LINE_AA)
         pr = f.get("pool_r", 0.0)
@@ -265,7 +268,7 @@ def pendant(cv, f):
         cv2.fillPoly(cv.img, [hull], (255, 255, 255), cv2.LINE_AA)
         cv2.polylines(cv.img, [hull], True, (0, 0, 0), 1, cv2.LINE_AA)
         cv2.polylines(cv.img, [np.int32(m.project(bottom))], True, (0, 0, 0), 1, cv2.LINE_AA)
-        cv.add(f, "pendant", f["plane"], [x, y, z], visible=True)
+        cv.add(f, "pendant", f.get("plane", "y=%g" % top[1]), [x, y, z], visible=True)
 
 
 # ---------------------------------------------------------------- drawn fixtures

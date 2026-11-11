@@ -98,6 +98,15 @@ def main(update=False):
     print(f"{'PASS' if good else 'FAIL'}  round coffers: {len(fx)} fixtures (expected 275 = 11 x 25), "
           f"centred: {centred} (left {xs[0]-x0:.2f} ft, right {x1-xs[-1]:.2f} ft)")
     ok &= good
+    # 6. pendants hanging from the coffer tops (from_y), with list slices
+    d["layers"].append({"name": "Coffer pendants", "features": [{"type": "pendant", "from_y": "coffers('Waffle', 'y')",
+        "x": "coffers('Waffle', 'x')[1::2]", "z": "coffers('Waffle', 'z')[::3]", "y": 14}]})
+    json.dump(d, open(os.path.join(proj, "design.pendants.json"), "w"))
+    rep = render(proj, linework=True, out_name="pendants.png", design_file="design.pendants.json")
+    pd = [r for r in rep if r["type"] == "pendant"]
+    good = len(pd) == 45 and all(r["surface"] == "y=24.858" and r["y"] == 14 for r in pd)
+    print(f"{'PASS' if good else 'FAIL'}  coffer pendants: {len(pd)} (expected 45 = 5 x 9), from the coffer tops at 24.86 ft")
+    ok &= good
     return ok
 
 

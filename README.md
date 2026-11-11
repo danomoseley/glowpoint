@@ -280,6 +280,7 @@ A pendant hanging from a horizontal surface, with a glow around the shade and an
 | Key | Default | Meaning |
 |---|---|---|
 | `plane` | | Surface it hangs from |
+| `from_y` | | Instead of `plane`: the height where the cord starts. For pendants in coffers: `"coffers('Waffle', 'y')"` |
 | `x`, `z` | | Position(s) |
 | `y` | | Height of the bottom of the shade above the floor, ft. Use this for "3 ft above the desk": `"box('Desk').top + 3"` |
 | `drop` | 10 | If there is no `y`: distance from the surface to the bottom of the shade, ft |
@@ -344,6 +345,13 @@ A waffle-slab ceiling of square coffers. It changes the model, so lights hide co
 | `depth` | | Coffer depth, ft |
 | `align` | `start` | `start`: the grid starts at the far end (`Z` end) and the left edge (`X` start); a cut coffer can remain at the other edges. `centre`: only full coffers, centred in the area, with equal solid borders |
 | `lit` | true | true: coffers glow. false: coffers are plain (use this when fixtures in the coffers give the light) |
+
+Pendants in coffers: a pendant in every second coffer across and every third in depth, hanging from the coffer tops (Python slices select from the lists):
+
+```json
+{"type": "pendant", "from_y": "coffers('Waffle', 'y')", "x": "coffers('Waffle', 'x')[1::2]",
+ "z": "coffers('Waffle', 'z')[::3]", "y": 14, "d": 1.2}
+```
 
 Round coffers, 24 in on centre, 18 in diameter, 6 in deep, centred:
 
