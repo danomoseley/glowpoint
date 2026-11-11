@@ -190,6 +190,29 @@ def main(update=False):
     print(f"{'PASS' if good else 'FAIL'}  legend below: {img2.shape[0] > img.shape[0]}, glows: {len(glows)}, "
           f"slot side automatic: {wash_same}, measure box: {box}")
     ok &= good
+    # 11. colour, wallwashers, stitch track, sconce direction, object light, bands, projections
+    d6 = json.load(open(os.path.join(proj, "design.json"))); d6["cct"] = 3000
+    d6["layers"] += [
+        {"name": "WW", "features": [{"type": "wallwasher", "wall": "Back wall", "range": "surf('Back wall').X", "spacing": 4, "cct": 4000},
+                                    {"type": "wallwasher", "wall": "Right wall", "mounting": "arm", "y": 15, "range": [62, 108], "spacing": 6}]},
+        {"name": "Stitch", "features": [{"type": "track", "plane": "Ceiling", "at": 6, "range": [60, 106], "pattern": {"run": 5, "gap": 3, "stagger": 3}, "spacing": 2.5}]},
+        {"name": "Up", "features": [{"type": "sconce", "plane": "Left wall", "along": [70, 90], "y": 11, "direction": "up", "ceiling": "Left soffit"}]},
+        {"name": "Obj", "features": [{"type": "object_light", "box": "Desk", "down": 0.8, "under_y": 0.6, "edge": "bottom"}]},
+        {"name": "Lay", "features": [{"type": "luminous", "plane": "Ceiling", "X": [29, 37], "Z": [62, 100], "grid": 4, "bands": 2}]},
+        {"name": "Proj", "features": [{"type": "projection", "plane": "Floor", "at": [8, 78], "size": [14, 16]},
+                                      {"type": "projection", "plane": "Left wall", "at": [80, 8], "size": [8, 6], "pattern": "window", "light_color": [255, 120, 40]}]}]
+    json.dump(d6, open(os.path.join(proj, "design.renfro2.json"), "w"))
+    rep = render(proj, linework=True, out_name="renfro2.png", design_file="design.renfro2.json")
+    from collections import Counter
+    c = Counter(r["type"] for r in rep)
+    from glowpoint import features as FF
+    warm, cool = FF.cct_bgr(2200), FF.cct_bgr(6500)
+    good = (c["wallwasher"] == 15 + 7 and c["track"] == 6 and c["projection"] == 2 and c["object_light"] == 1
+            and all(p["visible"] for p in rep if p["type"] == "projection") and warm[2] > warm[0] and cool[0] > cool[2]
+            and FF.GLOW == FF.cct_bgr(2700))
+    print(f"{'PASS' if good else 'FAIL'}  colour, wallwashers, stitch track, object light, projections: "
+          f"{c['wallwasher']} wallwashers, {c['track']} stitch runs, {c['projection']} projections; colour reset after render: {FF.GLOW == FF.cct_bgr(2700)}")
+    ok &= good
     return ok
 
 

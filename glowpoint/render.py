@@ -34,7 +34,7 @@ def evaluate(f, ns):
     if "aperture" in f:
         f = dict(f); ap = _aperture(f.pop("aperture"), ns)
         out = evaluate(f, ns); out["aperture"] = ap; return out
-    return {k: (ev(v, ns) if k not in ("layer", "type", "name", "note", "plane", "slot", "fixture", "shape", "align", "kind", "direction", "color", "ceiling", "style", "top", "mounting", "head") else v) for k, v in f.items()}
+    return {k: (ev(v, ns) if k not in ("layer", "type", "name", "note", "plane", "slot", "fixture", "shape", "align", "kind", "direction", "color", "ceiling", "style", "top", "mounting", "head", "wall", "box", "edge", "pattern", "bands_along") else v) for k, v in f.items()}
 
 
 LEGEND_PLACES = ("bottom-left", "bottom-right", "top-left", "top-right", "below")
@@ -161,6 +161,7 @@ def render(project, check=False, out_name="concept.png", design_file="design.jso
     cv.fixtures.update(design.get("fixtures", {}))
     cv.fixtures = {k: v for k, v in cv.fixtures.items() if not k.startswith("_")}
     for fe in geo:
+        F.set_color(fe.get("cct", design.get("cct")), fe.get("light_color"))
         base = geometry[fe["type"]][1](cv, fe, base)
     cv.img = base.copy(); cv.over = base.copy()
     # 2. lights: may refer to what is visible
@@ -187,7 +188,9 @@ def render(project, check=False, out_name="concept.png", design_file="design.jso
             if f["type"] not in lights:
                 raise ValueError(f"Unknown type '{f['type']}'. Known: {sorted(lights) + sorted(geometry)}. "
                                  f"Add new types in {project}/types/ or a GLOWPOINT_TYPES folder.")
+            F.set_color(fe.get("cct", design.get("cct")), fe.get("light_color"))
             lights[f["type"]](cv, fe)
+    F.set_color()
     warn_overlaps(cv.report)
     img = cv.finish()
     if design.get("legend", True):

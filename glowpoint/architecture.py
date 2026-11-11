@@ -3,7 +3,7 @@ Each type has prepare(model, feature), which runs before ray casting, and draw(c
 which returns the new base image. (The waffle is in features.py.)"""
 import numpy as np
 import cv2
-from .features import GLOW
+from . import features as _F
 
 SIDE_TONE = (200, 200, 200)
 
@@ -89,7 +89,7 @@ def cove_draw(cv, f, base):
                 P = cv.P
                 e = np.maximum(np.abs(P[..., 0]-xc)/hw, np.abs(P[..., 2]-zc)/hd)
                 g = strength*(0.45 + 0.55*np.clip(e, 0, 1)**2)
-                _blend(over, k, GLOW, g)
+                _blend(over, k, _F.GLOW, g)
             else:
                 _blend(over, k, (40, 150, 230), np.full(k.shape, 0.8*strength))
     elif kind == "perimeter":
@@ -100,7 +100,7 @@ def cove_draw(cv, f, base):
         inside = (cv.ids == ic) & (P[..., 0] > xi0 - 0.6) & (P[..., 0] < xi1 + 0.6) & (P[..., 2] > zi0 - 0.6) & (P[..., 2] < zi1 + 0.6)
         de = np.minimum.reduce([P[..., 0]-xi0, xi1-P[..., 0], P[..., 2]-zi0, zi1-P[..., 2]])
         g = strength*(0.3 + 0.7*np.exp(-np.clip(de, 0, None)/f.get("fade", 3.0)))
-        _blend(over, inside, GLOW, g)
+        _blend(over, inside, _F.GLOW, g)
         for i, s_ in mine.items():
             kk = cv.ids == i
             _blend(over, kk, SIDE_TONE, np.full(kk.shape, 0.5 if s_["cove"] == "side" else 0.7))
@@ -111,7 +111,7 @@ def cove_draw(cv, f, base):
         ends = np.clip(np.minimum(U-u0, u1-U)/1.0, 0, 1)
         k = (cv.ids == iw) & (P[..., 1] >= y)
         g = strength*np.exp(-np.clip(P[..., 1]-y, 0, None)/f.get("fade", 4.0))*ends
-        _blend(over, k, GLOW, g)
+        _blend(over, k, _F.GLOW, g)
         # spill onto the ceiling near the wall
         cname = f.get("ceiling")
         if cname:
@@ -119,7 +119,7 @@ def cove_draw(cv, f, base):
             kc = cv.ids == ic
             dist = np.abs(P[..., a] - wall["at"])
             gc = 0.7*strength*np.exp(-dist/f.get("spread", 4.0))*ends
-            _blend(over, kc, GLOW, gc)
+            _blend(over, kc, _F.GLOW, gc)
         for i, s in mine.items():
             kk = cv.ids == i
             _blend(over, kk, SIDE_TONE, np.full(kk.shape, 0.6))
@@ -184,7 +184,7 @@ def slats_draw(cv, f, base):
     for k, c in ((face == 1, tone), (face == 2, side)):
         sub[k] = (sub[k]*0.25 + np.array(c)*0.75).astype(np.uint8)
     if f.get("backlit"):
-        sub[through] = (sub[through]*0.4 + np.array(GLOW)*0.6).astype(np.uint8)
+        sub[through] = (sub[through]*0.4 + np.array(_F.GLOW)*0.6).astype(np.uint8)
     over[mask] = sub
     res = np.minimum(cv2.addWeighted(over, 0.7, base, 0.3, 0), base) if not f.get("backlit") else over
     # slat outlines
@@ -248,7 +248,7 @@ def lightwell_draw(cv, f, base):
             k1 = face == 1; sub[k1] = (sub[k1]*0.1 + np.array(top_col)*0.9).astype(np.uint8)
             k2 = face == 2
             g = wall_g*(0.35 + 0.65*np.clip((hit[:, 1]-y0)/depth, 0, 1))      # brighter near the top
-            sub[k2] = (sub[k2]*(1-g[k2, None]) + np.array(GLOW)*g[k2, None]).astype(np.uint8)
+            sub[k2] = (sub[k2]*(1-g[k2, None]) + np.array(_F.GLOW)*g[k2, None]).astype(np.uint8)
             over[mask] = sub
             lab = np.full(cv.ids.shape, -1, np.int64); lab[mask] = face
             e = np.zeros(lab.shape, bool)
@@ -265,7 +265,7 @@ def lightwell_draw(cv, f, base):
                 over[k] = (over[k]*0.1 + np.array(top_col)*0.9).astype(np.uint8)
             else:
                 g = wall_g*(0.35 + 0.65*np.clip((cv.P[..., 1]-y0)/depth, 0, 1))
-                _blend(over, k, GLOW, g)
+                _blend(over, k, _F.GLOW, g)
         over = _edges(cv, over, list(mine))
         (x0, x1), (z0, z1) = f["X"], f["Z"]
         note = f"rect, X {x0:.2f}..{x1:.2f}, Z {z0:.2f}..{z1:.2f}"; c = [(x0+x1)/2, y1, (z0+z1)/2]
@@ -276,7 +276,7 @@ def lightwell_draw(cv, f, base):
         P = cv.P; dfl = np.hypot(P[..., 0]-c[0], P[..., 2]-c[2])
         kfl = (P[..., 1] < 0.05) & (cv.ids >= 0)
         g = fl*np.exp(-(dfl/(size*1.6))**2)
-        _blend(over, kfl & (g > 0.03), GLOW, g)
+        _blend(over, kfl & (g > 0.03), _F.GLOW, g)
     cv.report.append(dict(layer=f.get("layer", ""), type="lightwell", surface=name, x=round(c[0], 2), y=round(y1, 2), z=round(c[2], 2),
                           note=note + f", depth {depth:.2f} ft"))
     return over

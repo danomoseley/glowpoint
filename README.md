@@ -225,6 +225,9 @@ glowpoint warns when two fixtures from different layers are at the same place (f
 | Type | What it is |
 |---|---|
 | [`glow`](#glow) | A soft glow around a point: a table lamp, floor lamp, or candle in the drawing |
+| [`wallwasher`](#wallwasher) | A row of wallwashers with scallops on the wall: recessed in the ceiling, or on arms out from the wall |
+| [`object_light`](#object_light) | Light from a piece of furniture or architecture: up onto the ceiling, down onto the floor, an LED edge |
+| [`projection`](#projection) | A projected light pattern on a surface: dappled light through leaves, a window shape, stripes |
 | [`downlight`](#downlight) | Round downlight symbol in a ceiling, with a beam and a pool |
 | [`sconce`](#sconce) | Wall light with a wash up and down |
 | [`uplight`](#uplight) | In-floor uplight that grazes a column face or wall |
@@ -241,6 +244,12 @@ glowpoint warns when two fixtures from different layers are at the same place (f
 | [`lightwell`](#lightwell) | A deep opening in a ceiling (round or rectangular) with a glowing top: a skylight or laylight, with concealed light on its walls |
 
 More types can be added as plugins (see [Adding your own types](#adding-your-own-types-plugins)).
+
+**Light colour (all types).** Every feature accepts `"cct"` (colour temperature in kelvin, for example `2700`, `3000`, `4000`) or `"light_color"` (`[R, G, B]`). Put `"cct"` at the top level of `design.json` to set the default for the whole design. Without either, the light is about 2700 K. The colours are diagrammatic: warm amber at 2200 K, pale yellow at 3000 K, near white at 4000 K, and cool blue at 6500 K. Use them to compare warm and cool options with the architect.
+
+```json
+{"title": "OPTION B", "cct": 3000, "layers": [ ... {"type": "wallwasher", "cct": 4000, ...} ... ]}
+```
 
 Positions on a surface:
 
@@ -264,6 +273,66 @@ A soft glow around a point: lights the surfaces nearby and shows a halo around t
 | `strength` | 0.7 | Brightness on the surfaces, 0 to 1 |
 | `halo` | 0.6 | Size of the halo around the source, ft (0 = none) |
 
+### `wallwasher`
+A row of wallwashers that light a wall with the typical scallops, brightest a little below the source and fading down the wall.
+
+```json
+{"type": "wallwasher", "wall": "Back wall", "plane": "Ceiling", "range": "surf('Back wall').X", "spacing": 4, "offset": 3}
+{"type": "wallwasher", "wall": "Right wall", "mounting": "arm", "y": 15, "range": [62, 108], "spacing": 6, "offset": 1.5}
+```
+
+| Key | Default | Meaning |
+|---|---|---|
+| `wall` | | The wall that is lit |
+| `mounting` | `recessed` | `recessed` (in the ceiling, near the wall) or `arm` (on arms out from the wall) |
+| `plane` | `Ceiling` | Recessed: the ceiling the fixtures are in |
+| `y` | | Arm: height of the fixtures, ft |
+| `range` | | (start, end) along the wall |
+| `spacing` | 3.0 | Distance between fixtures, ft (or `count`) |
+| `count` | | Number of fixtures, equally spaced |
+| `offset` | 2.5 | Distance from the wall to the fixtures, ft. Always on the room side |
+| `d` | 4 in | Recessed: aperture diameter, ft |
+| `length` | 2.0 | Arm: length of the lamp housing along the wall, ft |
+| `reach` | 8.0 | How far down the wall the light goes, ft |
+| `strength` | 0.95 | Brightness, 0 to 1 |
+
+### `object_light`
+Light that comes from a box in the model: up from its top onto the ceiling (a lit vitrine or cabinet), down from its underside onto the floor (a floating stair, a bench or desk with a light below), and an optional LED line along its edges.
+
+```json
+{"type": "object_light", "box": "Desk", "down": 0.8, "under_y": 0.6, "spread": 1.5, "edge": "bottom"}
+```
+
+| Key | Default | Meaning |
+|---|---|---|
+| `box` | | Name of the box in `model.json` |
+| `up` | 0 | Brightness of the light up onto the surfaces above the box, 0 to 1 |
+| `down` | 0 | Brightness of the light down onto the floor around the box, 0 to 1 |
+| `under_y` | bottom of the box | Height where the down light comes out (for example the underside of a desk top) |
+| `spread` | 2.0 | How far the light spreads past the outline of the box, ft |
+| `edge` | none | `bottom` or `top`: draw a lit line along those edges |
+
+### `projection`
+A light pattern projected on a surface, as with a gobo projector or daylight through leaves or a window.
+
+```json
+{"type": "projection", "plane": "Floor", "at": [8, 78], "size": [14, 16], "pattern": "dapple"}
+{"type": "projection", "plane": "Left wall", "at": [80, 8], "size": [8, 6], "pattern": "window", "panes": [3, 2], "cct": 2200}
+```
+
+| Key | Default | Meaning |
+|---|---|---|
+| `plane` | | Surface |
+| `at` | | Centre: `[x, z]` on floors and ceilings, `[along, y]` on walls |
+| `size` | [6, 4] | Width and height of the pattern on the surface, ft |
+| `pattern` | `dapple` | `dapple` (light through leaves), `window` (panes), or `stripes` |
+| `rotate` | 0 | Turn the pattern on the surface, degrees |
+| `soft` | 0.4 | Width of the soft edge, ft |
+| `strength` | 0.8 | Brightness, 0 to 1 |
+| `density`, `scale`, `seed` | 1.0, 1.0, 1 | Dapple: amount of light, size of the leaf pattern, and a number for a different random pattern |
+| `panes`, `mullion` | [3, 2], 0.25 | Window: number of panes across and up, and the width of the bars, ft |
+| `pitch`, `duty` | 1.0, 0.5 | Stripes: spacing, ft, and the lit part of each stripe, 0 to 1 |
+
 ### `downlight`
 A round downlight in a horizontal surface.
 
@@ -286,6 +355,9 @@ A wall light with a soft wash up and down.
 | `along`, `y` | | Position(s) along the wall and height to the center |
 | `w`, `h` | 0.4, 1.0 | Size of the fixture, ft |
 | `spread`, `reach` | 0.9, 2.6 | Width and height of the wash, ft |
+| `direction` | `both` | `up`, `down`, or `both` |
+| `ceiling` | none | Name of a ceiling or soffit that gets light above an up-light |
+| `ceiling_spread` | 4.0 | How far that light spreads on the ceiling, ft |
 
 ### `uplight`
 An in-floor uplight that grazes a vertical face. Usually for columns.
@@ -415,6 +487,7 @@ Add more sizes in `APERTURES` in `glowpoint/features.py`, or give the diameter d
 | `head_l` | 1.6 × diameter | Length of a cylinder head, ft |
 | `stem` | 0.12 | Length of the adapter between the track and a cylinder head, ft |
 | `tilt` | 0 | Aim: degrees from straight down |
+| `pattern` | none | Stitch track: short staggered runs instead of one continuous track. `{"run": 5, "gap": 3, "stagger": 3}`: runs of 5 ft with 3 ft gaps, moved 3 ft across, alternating left and right |
 | `pan` | 0 | Aim direction for the tilt, degrees: 0 = across the track toward +X (or +Z for tracks along X), 180 = the other way, 90 = along the track |
 | `beam` | 25 | Beam angle, degrees. Sets the size of the light pool where the aim lands |
 | `pool` | 0.5 | Brightness of the light pool, 0 to 1 (0 = none) |
@@ -479,6 +552,10 @@ A glowing area on a surface: a luminous ceiling, a backlit stretch ceiling, or a
 | `strength` | 0.9 | Brightness, 0 to 1 |
 | `soft` | 0.5 | Width of the softer border, ft |
 | `grid` | none | Panel size, ft: draws the joints between panels |
+| `bands` | none | Spacing of the lamps behind a fabric or glass ceiling, ft: draws faint brighter lines |
+| `bands_along` | `z` | Direction of the lamp lines: `z` or `x` |
+
+**Laylights and fabric ceilings.** A laylight (a glass ceiling with lamps or daylight above it) is a `luminous` area with `grid` for the glass panels and `bands` for the lamps above it; add a `track` below it for accent lights. A backlit fabric ceiling is a `luminous` area with `bands` and no `grid`.
 | `joint` | 0.03 | Joint width, ft |
 
 ### `waffle`
@@ -597,6 +674,8 @@ A deep opening in a ceiling with a glowing top (a skylight or a laylight) and co
 
 ![A light well, linear direct/indirect pendants, a track grid with spot heads, and a perimeter cove, seen from below](docs/slots-wells-linear.png)
 
+![Stitch track, recessed wallwashers on the back wall, arm wallwashers on the right wall, dappled light on the floor](docs/renfro-additions.png)
+
 ## Relationships (expressions)
 
 Expressions refer to the model by name. Use them for all positions that depend on the architecture, so lights move when the model is corrected.
@@ -629,7 +708,7 @@ Examples:
 
 Expressions run in a restricted Python evaluator with only these names (and Python arithmetic, lists, and slices).
 
-**Text that is not an expression.** These keys always hold plain text and are never evaluated: `layer`, `type`, `name`, `note`, `plane`, `slot`, `fixture`, `shape`, `align`, `kind`, `direction`, `color`, `ceiling`, `style`, `top`, `mounting`, `head`. `aperture` is plain text when it is a size name (`S`), and an expression otherwise (`inch(3)`). Every other text value is an expression, so a new text option in a plugin must be added to that list in `glowpoint/render.py`, or a word such as `round` is read as a Python name.
+**Text that is not an expression.** These keys always hold plain text and are never evaluated: `layer`, `type`, `name`, `note`, `plane`, `slot`, `fixture`, `shape`, `align`, `kind`, `direction`, `color`, `ceiling`, `style`, `top`, `mounting`, `head`, `wall`, `box`, `edge`, `pattern`, `bands_along`. `aperture` is plain text when it is a size name (`S`), and an expression otherwise (`inch(3)`). Every other text value is an expression, so a new text option in a plugin must be added to that list in `glowpoint/render.py`, or a word such as `round` is read as a Python name.
 
 ## Outputs
 

@@ -10,8 +10,30 @@ import itertools
 import numpy as np
 import cv2
 
-GLOW = (70, 215, 255)       # BGR, warm light
-BEAM = (150, 235, 255)
+# ---- light colour. The renderer calls set_color() before each feature, so every type follows the
+# feature's "cct" (kelvin) or "light_color" ([R, G, B]). Diagram colours, not physical ones.
+CCT_TABLE = [(2200, (40, 160, 255)), (2700, (70, 215, 255)), (3000, (110, 225, 255)), (3500, (165, 235, 255)),
+             (4000, (215, 240, 250)), (5000, (245, 235, 215)), (6500, (255, 215, 180))]     # BGR
+GLOW = (70, 215, 255)       # BGR: the light colour of the feature being drawn (default about 2700 K)
+BEAM = (150, 235, 255)      # paler version for beams
+LENS = (165, 238, 255)      # palest version for lit lenses and apertures
+
+
+def cct_bgr(k):
+    k = float(np.clip(k, CCT_TABLE[0][0], CCT_TABLE[-1][0]))
+    for (k0, c0), (k1, c1) in zip(CCT_TABLE[:-1], CCT_TABLE[1:]):
+        if k <= k1:
+            t = (k - k0)/(k1 - k0)
+            return tuple(int(round(a + (b - a)*t)) for a, b in zip(c0, c1))
+    return CCT_TABLE[-1][1]
+
+
+def set_color(cct=None, rgb=None):
+    """Set GLOW, BEAM and LENS for the next feature. rgb is [R, G, B]; cct is in kelvin; neither = default."""
+    global GLOW, BEAM, LENS
+    g = tuple(int(v) for v in rgb[::-1]) if rgb is not None else cct_bgr(cct if cct is not None else 2700)
+    mix = lambda c, t: tuple(int(round(a + (255 - a)*t)) for a in c)
+    GLOW, BEAM, LENS = g, mix(g, 0.55), mix(g, 0.65)
 
 
 def as_list(v):
@@ -38,7 +60,8 @@ class Canvas:
             ok.append(0 <= xi < W and 0 <= yi < H and z <= self.dep[yi, xi] + 0.3)
         return np.array(ok)
 
-    def glow(self, mask, g, col=GLOW):
+    def glow(self, mask, g, col=None):
+        col = GLOW if col is None else col
         k = mask & (g > 0.03)
         for ch, val in enumerate(col):
             self.over[..., ch][k] = (self.over[..., ch][k]*(1-g[k]) + val*g[k]).astype(np.uint8)
@@ -186,7 +209,16 @@ def sconce(cv, f):
         mask = cv.ids == i
         U, Yp = cv.P[..., hk], cv.P[..., 1]
         g = np.exp(-((U-u)/f.get("spread", 0.9))**2 - ((Yp-y)/f.get("reach", 2.6))**2)
+        dirn = f.get("direction", "both")
+        if dirn == "up": g = g*(Yp >= y)
+        elif dirn == "down": g = g*(Yp <= y)
+        elif dirn != "both": raise ValueError("sconce direction must be 'up', 'down' or 'both'")
         cv.glow(mask, g)
+        if f.get("ceiling") and dirn != "down":               # light on the ceiling above (garage, gallery)
+            ic = cv.sid(f["ceiling"]); P = cv.P
+            dw = np.abs(P[..., s["axis"]] - s["at"]); da = np.abs(P[..., hk] - u)
+            sp = f.get("ceiling_spread", 4.0)
+            cv.glow(cv.ids == ic, 0.7*np.exp(-(dw/sp)**2 - (da/sp)**2))
         bw, bh = f.get("w", 0.4)/2, f.get("h", 1.0)/2
         body = [m.to3d(s, u-bw, y-bh), m.to3d(s, u+bw, y-bh), m.to3d(s, u+bw, y+bh), m.to3d(s, u-bw, y+bh)]
         c = m.to3d(s, u, y)
@@ -274,12 +306,14 @@ def pendant(cv, f):
 
 
 # ---------------------------------------------------------------- drawn fixtures
-COLORS = {"lit": (175, 238, 255), "trim": (238, 238, 238), "metal": (190, 190, 190), "dark": (60, 60, 60),
+COLORS = {"lit": None, "trim": (238, 238, 238), "metal": (190, 190, 190), "dark": (60, 60, 60),
           "black": (20, 20, 20), "white": (255, 255, 255)}
 
 
 def _color(c):
-    return tuple(int(v) for v in (COLORS[c] if isinstance(c, str) else c[::-1]))   # names, or [R, G, B]
+    if isinstance(c, str):
+        return LENS if c == "lit" else COLORS[c]
+    return tuple(int(v) for v in c[::-1])                                       # [R, G, B]
 
 
 def _shape_dist(shape, u, v, part):
@@ -374,9 +408,17 @@ def luminous(cv, f):
         k &= (c >= lo) & (c <= hi)
         edge = np.minimum(edge, np.clip(np.minimum(c-lo, hi-c)/max(soft, 1e-6), 0, 1))
     g = f.get("strength", 0.9)*(0.6 + 0.4*edge)
-    for ch, val in enumerate((150, 235, 255)):
+    for ch, val in enumerate(LENS):
         cv.img[..., ch][k] = (cv.img[..., ch][k]*(1-g[k]) + val*g[k]).astype(np.uint8)
     cv.glow(k, g*0.8)
+    bands = f.get("bands")
+    if bands:                                                    # faint lines of the lamps behind a fabric or glass
+        key = keys[0] if f.get("bands_along", "z") == "z" else keys[1]
+        u = P[..., "XYZ".index(key)] - f[key][0] - bands/2
+        bd = np.abs(u - np.round(u/bands)*bands)
+        gb = 0.25*np.exp(-(bd/(bands*0.18))**2)
+        for ch, val in enumerate(LENS):
+            cv.img[..., ch][k] = (cv.img[..., ch][k]*(1-gb[k]) + 255*gb[k]).astype(np.uint8)
     mod = f.get("grid")
     if mod:                                                      # panel joints
         for key in keys:
@@ -411,7 +453,7 @@ def slots(cv, f):
         centre |= k_area & (dist <= np.maximum(w/6, 0.4*px)) & (px < pitch/3)
         n_lines += int((hi - lo - f.get("offset", pitch/2))/pitch + 1e-6) + 1
     if style == "lens":
-        for ch, val in enumerate((165, 238, 255)):
+        for ch, val in enumerate(LENS):
             cv.img[..., ch][band] = val
         # soft spill next to the slots
         if band.any():
@@ -433,7 +475,7 @@ def slots(cv, f):
                 hs = f.get("spot_size", 0.35)/2
                 heads |= k_area & (du <= hs) & (dv <= hs) & (px < sp/6)      # only where the heads are separate
             if heads.any():
-                for ch, val in enumerate((165, 238, 255)):
+                for ch, val in enumerate(LENS):
                     cv.img[..., ch][heads] = val
                 dist_px = cv2.distanceTransform((~heads).astype(np.uint8), cv2.DIST_L2, 3)
                 cv.glow(k_area & ~heads, 0.7*np.exp(-(dist_px/5.0)**2))
@@ -486,7 +528,7 @@ def linear_pendant(cv, f):
         cv2.fillPoly(cv.img, [hull], (225, 225, 225), cv2.LINE_AA)
         cv2.polylines(cv.img, [hull], True, (0, 0, 0), 1, cv2.LINE_AA)
         bp = np.int32(m.project(bottom))
-        cv2.fillPoly(cv.img, [bp], (165, 238, 255), cv2.LINE_AA)
+        cv2.fillPoly(cv.img, [bp], LENS, cv2.LINE_AA)
         cv2.polylines(cv.img, [bp], True, (60, 60, 60), 1, cv2.LINE_AA)
         # suspension cables at both ends
         for da in (-L/2*0.85, L/2*0.85):
@@ -526,6 +568,18 @@ def _ray_hit(m, o, d):
 
 
 def track(cv, f):
+    if f.get("pattern"):
+        p = f["pattern"]; run, gap = p.get("run", 4.0), p.get("gap", 2.0); stg = p.get("stagger", 0.0)
+        u0, u1 = f["range"]; k = 0; u = u0
+        while u < u1 - 0.1:
+            g = dict(f); g.pop("pattern"); g["range"] = [u, min(u + run, u1)]
+            g["at"] = [a + (stg/2 if k % 2 else -stg/2) for a in as_list(f["at"])]
+            track(cv, g); u += run + gap; k += 1
+        return
+    return _track(cv, f)
+
+
+def _track(cv, f):
     """A track with heads. Mounting: surface (profile below the ceiling), recessed (flush channel with a trim
     flange), trimless (flush channel, no trim), suspended (profile hanging on cables)."""
     m = cv.m
@@ -623,12 +677,118 @@ def track(cv, f):
             if np.dot(to_cam, dirv) > 0:
                 fp = np.int32(m.project(frontr)); apix = np.int32(m.project(apr))
                 cv2.fillPoly(cv.img, [fp], (30, 30, 30) if head != "flush" else col, cv2.LINE_AA)
-                cv2.fillPoly(cv.img, [apix], (165, 238, 255), cv2.LINE_AA)
+                cv2.fillPoly(cv.img, [apix], LENS, cv2.LINE_AA)
             cv.add(f, "track head", f.get("plane", "y=%g" % yt), front.tolist(), visible=True,
                    note=f"{ap if isinstance(ap, str) else round(dia*12, 2)} ({dia*12:.2f} in) {head}, {mounting} track")
             n_heads_total += 1
     cv.add(f, "track", f.get("plane", "y=%g" % yt), [0.0, yt, 0.0], visible=True,
            note=f"{mounting}, {len(as_list(f['at']))} run(s) along {direction.upper()}, {u1-u0:.1f} ft, {n_heads_total} heads")
+
+
+def wallwasher(cv, f):
+    """A row of wallwashers that light a wall with the typical scallops: recessed in the ceiling near the wall,
+    or on arms out from the wall."""
+    m = cv.m; wall = m.surface(f["wall"]); a = wall["axis"]; iw = cv.sid(f["wall"])
+    hk = 2 if a == 0 else 0
+    side = 1.0 if m.C_drawing[a] > wall["at"] else -1.0
+    mounting = f.get("mounting", "recessed")
+    u0, u1 = f["range"]; sp = f.get("spacing", 3.0)
+    us = list(np.arange(u0 + sp/2, u1 - sp/2 + 1e-6, sp)) if "count" not in f else \
+        [u0 + (u1-u0)*(i+0.5)/f["count"] for i in range(int(f["count"]))]
+    off = abs(f.get("offset", 2.5)); P = cv.P; U, Yp = P[..., hk], P[..., 1]
+    k = cv.ids == iw
+    if mounting == "recessed":
+        ceil = m.surface(f.get("plane", "Ceiling")); ytop = ceil["at"]
+    elif mounting == "arm":
+        ytop = f["y"]
+    else:
+        raise ValueError("wallwasher mounting must be 'recessed' or 'arm'")
+    reach = f.get("reach", 8.0); st = f.get("strength", 0.95)
+    total = np.zeros(k.shape)
+    for u in us:
+        # scallop: starts a little below the source, brightest about 'off' below it, fades down the wall
+        d = np.clip(ytop - Yp, 0, None)
+        width = 0.35*sp + 0.45*d
+        g = np.exp(-((U-u)/np.maximum(width, 0.3))**2) * (1 - np.exp(-(d/max(off*0.5, 0.3))**2)) * np.exp(-d/reach)
+        total = np.maximum(total, g)
+        c = [0.0, 0.0, 0.0]; c[a] = wall["at"] + side*off; c[hk] = u; c[1] = ytop
+        if mounting == "recessed":
+            r = f.get("d", 4/12)/2
+            ring = [[c[0]+r*np.cos(t), ytop, c[2]+r*np.sin(t)] for t in np.linspace(0, 2*np.pi, 32, endpoint=False)]
+            rp = m.project(ring)
+            if np.all(np.isfinite(rp)) and cv.visible(ring, rp).mean() > 0.5:
+                cv2.fillPoly(cv.img, [np.int32(rp)], LENS, cv2.LINE_AA)
+                cv2.polylines(cv.img, [np.int32(rp)], True, (40, 40, 40), 1, cv2.LINE_AA)
+        else:
+            base = list(c); base[a] = wall["at"]
+            cv.seg(base, c, 2)
+            L = f.get("length", 2.0); hw = 0.25                            # the lamp housing along the wall
+            box = []
+            for du, dy in ((-L/2, -hw/2), (L/2, -hw/2), (L/2, hw/2), (-L/2, hw/2)):
+                q = list(c); q[hk] += du; q[1] += dy; box.append(q)
+            bp = m.project(box)
+            if np.all(np.isfinite(bp)) and cv.visible(box, bp).mean() > 0.5:
+                cv2.fillPoly(cv.img, [np.int32(bp)], (225, 225, 225), cv2.LINE_AA)
+                cv2.polylines(cv.img, [np.int32(bp)], True, (40, 40, 40), 1, cv2.LINE_AA)
+        cv.add(f, "wallwasher", f["wall"], c, visible=True, note=mounting)
+    cv.glow(k, st*total)
+
+
+def object_light(cv, f):
+    """Light from a box: up from its top onto the ceiling (a vitrine, a cabinet), down from its underside onto
+    the floor (a floating stair, a bench, a shelf on legs), and an optional lit line along its edges."""
+    m = cv.m; b = m.boxes[f["box"]]; P = cv.P
+    dx = np.maximum.reduce([b.x0 - P[..., 0], P[..., 0] - b.x1, np.zeros(P.shape[:2])])
+    dz = np.maximum.reduce([b.z0 - P[..., 2], P[..., 2] - b.z1, np.zeros(P.shape[:2])])
+    dist = np.hypot(dx, dz)                                      # horizontal distance outside the box outline
+    sp = f.get("spread", 2.0)
+    up, down = f.get("up", 0.0), f.get("down", 0.0)
+    if up > 0:
+        above = (P[..., 1] > b.top + 0.05) & (cv.ids >= 0)
+        h = np.clip(P[..., 1] - b.top, 0, None)
+        cv.glow(above, up*np.exp(-(dist/(sp + 0.25*h))**2))
+    if down > 0:
+        under = f.get("under_y", b.y0)                             # where the light comes out (underside)
+        below = (P[..., 1] < under - 0.05) & (cv.ids >= 0)
+        cv.glow(below, down*np.exp(-(dist/sp)**2))
+    if f.get("edge"):                                            # an LED line along the bottom or top edges
+        y = b.y0 if f["edge"] == "bottom" else b.top
+        corners = [[b.x0, y, b.z0], [b.x1, y, b.z0], [b.x1, y, b.z1], [b.x0, y, b.z1]]
+        for i in range(4): cv.seg(corners[i], corners[(i+1) % 4], 2)
+    cv.add(f, "object_light", f["box"], [b.xc, b.top, b.zc], note=f"up {up}, down {down}")
+
+
+def projection(cv, f):
+    """A light pattern projected on a surface: dappled light through leaves, a window shape, or stripes."""
+    m = cv.m; s = m.surface(f["plane"]); i = cv.sid(f["plane"]); a = s["axis"]
+    keys = {0: ["Z", "Y"], 1: ["X", "Z"], 2: ["X", "Y"]}[a]       # (x, z) on ceilings/floors, (along, y) on walls
+    P = cv.P; k = cv.ids == i
+    cu, cv_ = f["at"]; w, h = f.get("size", [6.0, 4.0])
+    U = P[..., "XYZ".index(keys[0])] - cu; V = P[..., "XYZ".index(keys[1])] - cv_
+    rot = np.radians(f.get("rotate", 0)); U, V = np.cos(rot)*U + np.sin(rot)*V, -np.sin(rot)*U + np.cos(rot)*V
+    inside = k & (np.abs(U) <= w/2) & (np.abs(V) <= h/2)
+    edge = np.clip(np.minimum(w/2 - np.abs(U), h/2 - np.abs(V))/max(f.get("soft", 0.4), 1e-3), 0, 1)
+    pat = f.get("pattern", "dapple")
+    if pat == "dapple":
+        rng = np.random.default_rng(f.get("seed", 1)); sc = f.get("scale", 1.0)
+        val = np.zeros(k.shape)
+        for wl, amp in ((2.2, 1.0), (1.1, 0.6), (0.55, 0.35)):         # three octaves of smooth random waves
+            for _ in range(4):
+                ang = rng.uniform(0, np.pi); ph = rng.uniform(0, 2*np.pi); kk = 2*np.pi/(wl*sc)
+                val += amp*np.cos(kk*(np.cos(ang)*U + np.sin(ang)*V) + ph)
+        val = (val - val[inside].mean())/(val[inside].std() + 1e-6) if inside.any() else val
+        g = np.clip((val + 0.4 - (f.get("density", 1.0) - 1))*1.3, 0, 1)
+    elif pat == "window":
+        cols, rows = f.get("panes", [3, 2]); mull = f.get("mullion", 0.25)
+        pu = (U + w/2) % (w/cols); pv = (V + h/2) % (h/rows)
+        g = ((pu > mull/2) & (pu < w/cols - mull/2) & (pv > mull/2) & (pv < h/rows - mull/2)).astype(float)
+    elif pat == "stripes":
+        pitch = f.get("pitch", 1.0); g = ((U % pitch) < pitch*f.get("duty", 0.5)).astype(float)
+    else:
+        raise ValueError("projection pattern must be 'dapple', 'window' or 'stripes'")
+    cv.glow(inside, f.get("strength", 0.8)*g*edge)
+    c = [0.0, 0.0, 0.0]; c[a] = s["at"]; c["XYZ".index(keys[0])] = cu; c["XYZ".index(keys[1])] = cv_
+    cv.add(f, "projection", f["plane"], c, visible=bool(inside.any()), note=pat)
 
 
 def glow(cv, f):
@@ -652,5 +812,5 @@ def glow(cv, f):
         cv.add(f, "glow", "point", c.tolist(), visible=vis)
 
 
-LIGHTS = dict(glow=glow, downlight=downlight, sconce=sconce, uplight=uplight, wash=wash, pendant=pendant, fixture=fixture,
+LIGHTS = dict(glow=glow, wallwasher=wallwasher, object_light=object_light, projection=projection, downlight=downlight, sconce=sconce, uplight=uplight, wash=wash, pendant=pendant, fixture=fixture,
               luminous=luminous, slots=slots, linear_pendant=linear_pendant, track=track)
