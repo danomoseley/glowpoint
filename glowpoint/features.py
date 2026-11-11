@@ -296,7 +296,7 @@ def fixture(cv, f):
     if spec is None:
         raise KeyError(f"No fixture named '{f['fixture']}'. Known: {sorted(cv.fixtures)}")
     if "y" in f and "plane" not in f:
-        s = dict(name=f.get("surface_name", "ceiling"), axis=1, at=None)
+        s = dict(name="level", axis=1, at=None)
     else:
         s = m.surface(f["plane"])
     a = s["axis"]

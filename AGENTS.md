@@ -15,7 +15,8 @@ glowpoint places lighting concepts on a perspective image of a space. The full r
 9. **Use the original drawing.** `drawing.png` must be the file that the user gave you, not an output from `out/` and not an image with lights or coffers already drawn on it. glowpoint marks its own PNG outputs and refuses them as a drawing, but screenshots and JPEG copies lose that mark. If a conversation has several images, confirm with the user which one is the original. If the drawing already shows colored lights or coffers, stop and ask.
 10. **Edit JSON files by inserting or changing text**, not by writing the whole file again with a JSON library. That keeps the layout and the diffs small. In `design.json`, most text values are expressions; only `layer`, `type`, `name`, `note`, `plane`, `slot`, `fixture`, `shape`, `align` are plain text (see the README).
 11. **Do not edit `projects/lobby` for experiments.** Copy it to `local/` first.
-12. **After a code change, run the tests:** `python3 tests/test_calibrate.py` and `python3 tests/test_render.py`.
+12. **Before every commit and push, update README.md and AGENTS.md** so they describe every change: new types, options, expressions, tools, and behaviour. `python3 tests/test_docs.py` checks this. Turn on the pre-push hook once in each clone with `git config core.hooksPath .githooks`: it runs the documentation test and all tests, and stops a push that fails.
+13. **After a code change, run the tests:** `python3 tests/test_docs.py`, `python3 tests/test_render.py`, and `python3 tests/test_calibrate.py`.
 
 Run all commands from the repository root (`python3 -m glowpoint.<tool>`). In a new environment, run `python3 -m glowpoint.doctor` first. If you cannot clone from GitHub (no internet), ask the user to upload the repository as a zip (GitHub: Code → Download ZIP).
 

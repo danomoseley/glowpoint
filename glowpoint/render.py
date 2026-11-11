@@ -24,7 +24,7 @@ GEOMETRY = {"waffle": (F.waffle_prepare, F.waffle_draw)}
 
 
 def evaluate(f, ns):
-    return {k: (ev(v, ns) if k not in ("layer", "type", "name", "note", "plane", "slot", "fixture", "surface_name", "shape", "align") else v) for k, v in f.items()}
+    return {k: (ev(v, ns) if k not in ("layer", "type", "name", "note", "plane", "slot", "fixture", "shape", "align") else v) for k, v in f.items()}
 
 
 def legend(img, title, layers, at="bottom-left"):
