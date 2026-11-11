@@ -1,9 +1,13 @@
-"""Render test: draws the lobby test fixture (tests/fixtures/lobby) as linework and compares it with tests/reference/lobby_linework.png.
+"""Render test for the lobby test fixture (tests/fixtures/lobby).
 
   python3 tests/test_render.py            check
   python3 tests/test_render.py --update   accept the current result as the new reference (after an intended change)
 
-Also checks that positions.csv has the expected number of lights.
+Three checks, from strict to loose:
+  1. positions: every light's type, surface and X/Y/Z match tests/reference/lobby_positions.csv (0.01 ft)
+  2. geometry:  the surface seen at each pixel matches the reference (pure numpy, same on all OpenCV versions)
+  3. image:     the linework image is close to tests/reference/lobby_linework.png. Text and soft edges are drawn
+                a little differently by different OpenCV versions, so this check allows small differences.
 """
 import csv, os, shutil, sys, tempfile
 import numpy as np
@@ -11,35 +15,65 @@ import cv2
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 sys.path.insert(0, ROOT)
 from glowpoint.render import render
+from glowpoint.model import Model
 
-REF = os.path.join(ROOT, "tests", "reference", "lobby_linework.png")
-EXPECTED_ITEMS = 29
+REF_DIR = os.path.join(ROOT, "tests", "reference")
+REF_IMG = os.path.join(REF_DIR, "lobby_linework.png")
+REF_POS = os.path.join(REF_DIR, "lobby_positions.csv")
+REF_IDS = os.path.join(REF_DIR, "lobby_surface_ids.npz")
+IMAGE_LIMIT = 3.0        # percent of pixels that may differ after a small blur
+
+
+def surface_ids(proj):
+    m = Model(proj)
+    ids = m.raycast((700, 1050))[0]
+    names = np.array([s["name"] for s in m.surfaces])
+    return np.where(ids >= 0, names[np.clip(ids, 0, None)], "")
 
 
 def main(update=False):
     tmp = tempfile.mkdtemp(prefix="glowpoint_render_")
     proj = os.path.join(tmp, "lobby")
     shutil.copytree(os.path.join(ROOT, "tests", "fixtures", "lobby"), proj, ignore=shutil.ignore_patterns("out", "drawing.*"))
-    rep = render(proj, linework=True, out_name="linework.png")
+    render(proj, linework=True, out_name="linework.png")
     img = cv2.imread(os.path.join(proj, "out", "linework.png"))
+    pos = list(csv.DictReader(open(os.path.join(proj, "out", "positions_linework.csv"))))
+    ids = surface_ids(proj)
     if update:
-        cv2.imwrite(REF, img); print(f"reference updated: {REF}"); return True
-    ref = cv2.imread(REF)
+        cv2.imwrite(REF_IMG, img)
+        shutil.copy(os.path.join(proj, "out", "positions_linework.csv"), REF_POS)
+        np.savez_compressed(REF_IDS, ids=ids)
+        print(f"references updated in {REF_DIR}"); return True
     ok = True
-    if ref is None or ref.shape != img.shape:
-        print("FAIL  reference missing or a different size"); return False
-    diff = np.abs(img.astype(int) - ref.astype(int)).max(2) > 40
-    share = diff.mean() * 100
-    good = share < 0.1
+    # 1. positions
+    ref = list(csv.DictReader(open(REF_POS)))
+    bad = [] if len(ref) == len(pos) else [f"{len(pos)} items, expected {len(ref)}"]
+    for a, b in zip(pos, ref):
+        if (a["layer"], a["type"], a["surface"]) != (b["layer"], b["type"], b["surface"]) or \
+           max(abs(float(a[k]) - float(b[k])) for k in "xyz") > 0.01:
+            bad.append(f"{a['type']} on {a['surface']}: {a['x']},{a['y']},{a['z']} (expected {b['x']},{b['y']},{b['z']})")
+    print(f"{'PASS' if not bad else 'FAIL'}  positions: {len(pos)} items" + ("" if not bad else "\n      " + "\n      ".join(bad[:5])))
+    ok &= not bad
+    # 2. geometry
+    ref_ids = np.load(REF_IDS)["ids"]
+    share = (ids != ref_ids).mean()*100
+    good = share < 0.01
+    print(f"{'PASS' if good else 'FAIL'}  geometry: {share:.3f}% of pixels see a different surface (limit 0.01%)")
     ok &= good
-    print(f"{'PASS' if good else 'FAIL'}  lobby linework: {share:.3f}% of pixels differ from the reference (limit 0.1%)")
+    # 3. image
+    ref_img = cv2.imread(REF_IMG)
+    if ref_img is None or ref_img.shape != img.shape:
+        print("FAIL  image: reference missing or a different size"); return False
+    a = cv2.GaussianBlur(img, (3, 3), 0).astype(int); b = cv2.GaussianBlur(ref_img, (3, 3), 0).astype(int)
+    diff = np.abs(a - b).max(2) > 60
+    share = diff.mean()*100
+    good = share < IMAGE_LIMIT
+    print(f"{'PASS' if good else 'FAIL'}  image: {share:.3f}% of pixels differ from the reference (limit {IMAGE_LIMIT}%, "
+          f"OpenCV {cv2.__version__})")
     if not good:
         cv2.imwrite(os.path.join(tmp, "diff.png"), diff.astype(np.uint8)*255)
         print(f"      result {os.path.join(proj, 'out', 'linework.png')}, differences {os.path.join(tmp, 'diff.png')}")
-    rows = list(csv.DictReader(open(os.path.join(proj, "out", "positions_linework.csv"))))
-    good = len(rows) == EXPECTED_ITEMS
     ok &= good
-    print(f"{"PASS" if good else "FAIL"}  positions_linework.csv: {len(rows)} items (expected {EXPECTED_ITEMS})")
     return ok
 
 

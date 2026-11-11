@@ -436,7 +436,7 @@ Hand drawings are not exact. Match the model to the drawing, not to an ideal gri
 
 ### Tests
 
-`python3 tests/test_render.py` draws the lobby test fixture (`tests/fixtures/lobby`) and compares it with a reference image (`--update` accepts an intended change).
+`python3 tests/test_render.py` draws the lobby test fixture (`tests/fixtures/lobby`) and checks it three ways: the light positions (within 0.01 ft), the surface that each pixel shows (exact, the same on every OpenCV version), and the image (loosely, because OpenCV versions draw text and soft edges a little differently). `--update` accepts an intended change.
 
 `python3 tests/test_calibrate.py` renders the lobby model from known cameras (two- and three-point, with tilt and roll), runs the setup on each image, and compares the result with the true camera. Current results: lens within 0.3 %, angles within 0.15°, scale within 1 %.
 
