@@ -107,6 +107,27 @@ def main(update=False):
     good = len(pd) == 45 and all(r["surface"] == "y=24.858" and r["y"] == 14 for r in pd)
     print(f"{'PASS' if good else 'FAIL'}  coffer pendants: {len(pd)} (expected 45 = 5 x 9), from the coffer tops at 24.86 ft")
     ok &= good
+    # 7. coves, slats and a luminous ceiling
+    d2 = json.load(open(os.path.join(proj, "design.json")))
+    d2["layers"][0] = {"name": "Cove", "features": [{"type": "cove", "kind": "recess", "plane": "Ceiling",
+        "X": "inset(gap('Column L1', 'Column R1'), 3)", "Z": "(surf('Ceiling').Z[0], centre_line('Column L1', 'Column R1', 'Z'))", "depth": 1.0}]}
+    d2["layers"] += [
+        {"name": "Wall cove", "features": [{"type": "cove", "kind": "wall", "name": "Right cove", "plane": "Right wall",
+            "range": [40, 105], "y": 14, "depth": 1.0, "ceiling": "Ceiling"}]},
+        {"name": "Slats", "features": [{"type": "slats", "X": "(surf('Soffit step').at, -5.32)", "Z": "(surf('Ceiling').Z[0], surf('Back wall').at)",
+            "y": 20, "h": "inch(6)", "w": "inch(3)", "pitch": 1.0, "direction": "x", "backlit": True}]},
+        {"name": "Luminous", "features": [{"type": "luminous", "plane": "Ceiling", "X": [29, 37], "Z": [62, 100], "grid": 2.0}]}]
+    json.dump(d2, open(os.path.join(proj, "design.arch.json"), "w"))
+    rep = render(proj, linework=True, out_name="arch.png", design_file="design.arch.json")
+    kinds = {r["type"]: r for r in rep}
+    slat = next((r for r in rep if r["type"] == "slats"), None)
+    lum = next((r for r in rep if r["type"] == "luminous"), None)
+    coves = [r for r in rep if r["type"] == "cove"]
+    good = len(coves) == 2 and slat is not None and slat["note"].startswith("107 slats") and lum is not None \
+        and lum["note"].startswith("304.0 sq ft")
+    print(f"{'PASS' if good else 'FAIL'}  coves, slats, luminous: {len(coves)} coves, "
+          f"{slat['note'][:20] if slat else 'no slats'}, {lum['note'] if lum else 'no luminous'}")
+    ok &= good
     return ok
 
 

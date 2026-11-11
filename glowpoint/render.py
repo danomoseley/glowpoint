@@ -17,14 +17,16 @@ from . import pngmark
 from .model import Model
 from .expr import namespace, ev
 from . import features as F
+from . import architecture as ARCH
 from . import plugins
 from . import linework as LW
 
 GEOMETRY = {"waffle": (F.waffle_prepare, F.waffle_draw)}
+GEOMETRY.update(ARCH.GEOMETRY)
 
 
 def evaluate(f, ns):
-    return {k: (ev(v, ns) if k not in ("layer", "type", "name", "note", "plane", "slot", "fixture", "shape", "align") else v) for k, v in f.items()}
+    return {k: (ev(v, ns) if k not in ("layer", "type", "name", "note", "plane", "slot", "fixture", "shape", "align", "kind", "direction", "color", "ceiling") else v) for k, v in f.items()}
 
 
 def legend(img, title, layers, at="bottom-left"):

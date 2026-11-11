@@ -230,7 +230,10 @@ glowpoint warns when two fixtures from different layers are at the same place (f
 | [`wash`](#wash) | Wall wash from the top of a wall, optionally from a ceiling slot |
 | [`pendant`](#pendant) | Pendant on a cord, from a ceiling or from inside coffers |
 | [`fixture`](#fixture) | A specific fixture, drawn from its parts (trim, lens, rings, slots) |
+| [`luminous`](#luminous) | A glowing ceiling or wall area (luminous ceiling, backlit stretch ceiling), with optional panel joints |
 | [`waffle`](#waffle) | Square or round coffers cut into a ceiling |
+| [`cove`](#cove) | A recessed ceiling cove (tray), or a wall cove (a lit ledge on a wall) |
+| [`slats`](#slats) | Parallel slats or baffles below a ceiling, optionally lit from above |
 
 More types can be added as plugins (see [Adding your own types](#adding-your-own-types-plugins)).
 
@@ -345,6 +348,22 @@ Parts are drawn in order, so later parts are on top. All sizes in feet.
 
 To describe a fixture from a photo or a spec sheet: start with the outer trim (`fill` + `line`), then the lens or aperture (`fill`, `lit`), then details (`line` rings, `slots`). Use the real dimensions from the spec sheet.
 
+### `luminous`
+A glowing area on a surface: a luminous ceiling, a backlit stretch ceiling, or a light wall.
+
+```json
+{"type": "luminous", "plane": "Ceiling", "X": "(box('Column R1').x1 + 1, surf('Right wall').at - 1)", "Z": [62, 100], "grid": 2.0}
+```
+
+| Key | Default | Meaning |
+|---|---|---|
+| `plane` | | Surface |
+| `X`, `Y`, `Z` | | (start, end) of the area on the two axes of the surface: `X` and `Z` on a ceiling, `Z` and `Y` on a wall at constant X, `X` and `Y` on a wall at constant Z |
+| `strength` | 0.9 | Brightness, 0 to 1 |
+| `soft` | 0.5 | Width of the softer border, ft |
+| `grid` | none | Panel size, ft: draws the joints between panels |
+| `joint` | 0.03 | Joint width, ft |
+
 ### `waffle`
 A waffle-slab ceiling of square coffers. It changes the model, so lights hide correctly inside the coffers.
 
@@ -376,6 +395,59 @@ Round coffers, 24 in on centre, 18 in diameter, 6 in deep, centred:
 ```
 
 ![Round coffers with an 8 in fixture in each, seen from below](docs/round-coffers.png)
+
+### `cove`
+Two kinds of cove. Both change the model, so the cove hides what is behind it.
+
+**Recessed cove** (`"kind": "recess"`): a tray recessed into the ceiling. The light comes from a hidden ledge at its edges, so the top of the tray is brightest near the edges.
+
+```json
+{"type": "cove", "kind": "recess", "plane": "Ceiling", "X": "inset(gap('Column L1', 'Column R1'), 3)",
+ "Z": "(surf('Ceiling').Z[0], centre_line('Column L1', 'Column R1', 'Z'))", "depth": 1.0}
+```
+
+**Wall cove** (`"kind": "wall"`): a ledge along a wall with a hidden light on top. It lights the wall above it and, if you name the ceiling, the ceiling near the wall.
+
+```json
+{"type": "cove", "kind": "wall", "name": "Right cove", "plane": "Right wall", "range": [40, 105],
+ "y": 14, "depth": 1.0, "ceiling": "Ceiling"}
+```
+
+| Key | Default | Meaning |
+|---|---|---|
+| `kind` | `recess` | `recess` or `wall` |
+| `name` | `Cove` | Name of the cove. Give each cove a different name |
+| `plane` | `Ceiling` | Recess: the ceiling it is cut into. Wall: the wall |
+| `X`, `Z` | | Recess: (start, end) of the tray |
+| `depth` | 1.0 (wall) | Recess: depth of the tray, ft. Wall: how far the ledge projects from the wall, ft |
+| `range` | | Wall: (start, end) along the wall |
+| `y` | | Wall: height of the top of the ledge, ft |
+| `h` | 0.5 | Wall: height of the ledge fascia, ft |
+| `fade` | 4.0 | Wall: how far up the wall the light goes, ft |
+| `ceiling` | none | Wall: name of the ceiling that gets light near the wall |
+| `spread` | 4.0 | Wall: how far onto the ceiling the light goes, ft |
+| `strength` | 0.85 | Brightness, 0 to 1 |
+
+### `slats`
+Parallel slats (or baffles) hanging below a ceiling, ray-traced so that you see between them in perspective. Lights and surfaces behind the slats show through the gaps and are hidden by the slats.
+
+```json
+{"type": "slats", "X": "(surf('Soffit step').at, -5.32)", "Z": "(surf('Ceiling').Z[0], surf('Back wall').at)",
+ "y": 20, "h": "inch(6)", "w": "inch(3)", "pitch": 1.0, "direction": "x", "color": "wood", "backlit": true}
+```
+
+| Key | Default | Meaning |
+|---|---|---|
+| `name` | `Slats` | Name. Give each slat field a different name |
+| `X`, `Z` | | (start, end) of the slat area |
+| `y` | | Height of the bottom of the slats, ft |
+| `h`, `w` | | Height and width of each slat, ft |
+| `pitch` | | Spacing, centre to centre, ft |
+| `direction` | `z` | The direction the slats run: `z` (away from the viewer) or `x` (across) |
+| `color` | `wood` | `wood`, `white`, `dark`, or `[R, G, B]` |
+| `backlit` | false | true: light between the slats (a lit ceiling above them) |
+
+![A recessed cove, backlit wood slats, a wall cove, and a luminous ceiling with 2 ft panels](docs/coves-slats-luminous.png)
 
 ## Relationships (expressions)
 
@@ -409,7 +481,7 @@ Examples:
 
 Expressions run in a restricted Python evaluator with only these names (and Python arithmetic, lists, and slices).
 
-**Text that is not an expression.** These keys always hold plain text and are never evaluated: `layer`, `type`, `name`, `note`, `plane`, `slot`, `fixture`, `shape`, `align`. Every other text value is an expression, so a new text option in a plugin must be added to that list in `glowpoint/render.py`, or a word such as `round` is read as a Python name.
+**Text that is not an expression.** These keys always hold plain text and are never evaluated: `layer`, `type`, `name`, `note`, `plane`, `slot`, `fixture`, `shape`, `align`, `kind`, `direction`, `color`, `ceiling`. Every other text value is an expression, so a new text option in a plugin must be added to that list in `glowpoint/render.py`, or a word such as `round` is read as a Python name.
 
 ## Outputs
 

@@ -359,4 +359,34 @@ def fixture(cv, f):
         cv.add(f, "fixture", f.get("plane", "y=%g" % at), c, visible=bool(drawn.any()), note=f["fixture"] if isinstance(f["fixture"], str) else "")
 
 
-LIGHTS = dict(downlight=downlight, sconce=sconce, uplight=uplight, wash=wash, pendant=pendant, fixture=fixture)
+def luminous(cv, f):
+    """A glowing area on a surface: a luminous ceiling, a backlit stretch ceiling, a light wall.
+    Area: X and Z on horizontal surfaces, Z and Y on walls at constant X, X and Y on walls at constant Z."""
+    m = cv.m; s = m.surface(f["plane"]); i = cv.sid(f["plane"]); a = s["axis"]
+    keys = [k for k in "XYZ" if k != "XYZ"[a]]
+    P = cv.P; k = cv.ids == i
+    soft = f.get("soft", 0.5)
+    edge = np.ones(k.shape)
+    for key in keys:
+        lo, hi = f[key]; c = P[..., "XYZ".index(key)]
+        k &= (c >= lo) & (c <= hi)
+        edge = np.minimum(edge, np.clip(np.minimum(c-lo, hi-c)/max(soft, 1e-6), 0, 1))
+    g = f.get("strength", 0.9)*(0.6 + 0.4*edge)
+    for ch, val in enumerate((150, 235, 255)):
+        cv.img[..., ch][k] = (cv.img[..., ch][k]*(1-g[k]) + val*g[k]).astype(np.uint8)
+    cv.glow(k, g*0.8)
+    mod = f.get("grid")
+    if mod:                                                      # panel joints
+        for key in keys:
+            lo = f[key][0]; u = P[..., "XYZ".index(key)] - lo
+            gy, gx = np.gradient(u); px = np.hypot(gx, gy)
+            line = k & (np.abs(u - np.round(u/mod)*mod) < np.maximum(f.get("joint", 0.03)/2, 0.5*px)) & (px < mod/3)
+            cv.img[line] = (cv.img[line]*0.75).astype(np.uint8)
+    c = [0.0, 0.0, 0.0]; c[a] = s["at"]
+    for key in keys: c["XYZ".index(key)] = sum(f[key])/2
+    area = np.prod([f[key][1]-f[key][0] for key in keys])
+    cv.add(f, "luminous", f["plane"], c, visible=bool(k.any()), note=f"{area:.1f} sq ft" + (f", panels {mod*12:.0f} in" if mod else ""))
+
+
+LIGHTS = dict(downlight=downlight, sconce=sconce, uplight=uplight, wash=wash, pendant=pendant, fixture=fixture,
+              luminous=luminous)
