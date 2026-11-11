@@ -285,6 +285,49 @@ A pendant hanging from a horizontal surface, with a glow around the shade and an
 | `pool_r` | 0 | Radius of a light pool, ft (0 = none) |
 | `beam_to` | 0 | Height of the pool (0 = floor) |
 
+### `fixture`
+A specific fixture, drawn from its parts (trim, lens, rings, slots), flush on a surface. Use it to show the real fixture of the design, not a generic symbol. The fixture is defined one time in a **fixture list** and used in many places.
+
+```json
+{"type": "fixture", "fixture": "round-12in-downlight",
+ "x": "coffers('Waffle', 'x')", "z": "coffers('Waffle', 'z')", "y": "coffers('Waffle', 'y')"}
+```
+
+| Key | Meaning |
+|---|---|
+| `fixture` | Name in the fixture list |
+| `plane` | Surface the fixture is on (or give `y` for a horizontal level, for example the top of the coffers) |
+| `x`, `z` or `along`, `y` | Position(s), as for the other types |
+| `rotate` | Turn the fixture on its surface, degrees |
+
+**Fixture list.** Put it in `<project>/fixtures.json`, or in a `"fixtures"` block in `design.json` (that one wins). [`examples/fixtures.json`](examples/fixtures.json) has a round downlight, a 2×2 troffer, and a linear slot.
+
+```json
+"round-12in-downlight": {
+  "parts": [
+    {"kind": "fill", "shape": "round", "d": 1.0, "color": "trim"},
+    {"kind": "line", "shape": "round", "d": 1.0, "width": 0.03},
+    {"kind": "fill", "shape": "round", "d": 0.7, "color": "lit"}
+  ],
+  "glow": {"r": 0.9, "strength": 0.55}
+}
+```
+
+Parts are drawn in order, so later parts are on top. All sizes in feet.
+
+| Part key | Meaning |
+|---|---|
+| `kind` | `fill` (a filled shape), `line` (the outline of a shape), `slots` (parallel lines inside a shape: louvers, blades) |
+| `shape` | `round` (`d`), `square` (`w`), or `rect` (`w` across, `l` along) |
+| `width` | Line width, ft. Thin lines stay at least about one pixel wide |
+| `n`, `angle` | `slots`: number of lines, and their direction in degrees |
+| `color` | `lit`, `trim`, `metal`, `dark`, `black`, `white`, or `[R, G, B]` |
+| `glow` | For the fixture: `r` (ft) and `strength` (0 to 1) of the light around it |
+
+![A 12 in round fixture in every coffer, seen from below](docs/coffer-fixtures.png)
+
+To describe a fixture from a photo or a spec sheet: start with the outer trim (`fill` + `line`), then the lens or aperture (`fill`, `lit`), then details (`line` rings, `slots`). Use the real dimensions from the spec sheet.
+
 ### `waffle`
 A waffle-slab ceiling of square coffers. It changes the model, so lights hide correctly inside the coffers.
 
@@ -313,6 +356,8 @@ Expressions refer to the model by name. Use them for all positions that depend o
 | `every(start, stop, step)` | start, start + step, … up to stop |
 | `inch(n)` | n inches in feet |
 | `visible_faces('column')` | Every face of every column that is visible in the drawing |
+| `coffers('Waffle', 'x')`, `coffers('Waffle', 'z')` | Centres of all full coffers of a waffle, across and in depth. Use both for one item in every coffer |
+| `coffers('Waffle', 'y')` | Height of the coffer tops (ceiling + depth), for fixtures inside the coffers |
 
 Examples:
 

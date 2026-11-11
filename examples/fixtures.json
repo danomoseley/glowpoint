@@ -1,0 +1,28 @@
+{
+ "_note": "Example fixture list. Copy to <project>/fixtures.json, or put a \"fixtures\" block in design.json. Sizes in feet.",
+ "round-12in-downlight": {
+  "parts": [
+   {"kind": "fill", "shape": "round", "d": 1.0, "color": "trim"},
+   {"kind": "line", "shape": "round", "d": 1.0, "width": 0.03},
+   {"kind": "fill", "shape": "round", "d": 0.7, "color": "lit"},
+   {"kind": "line", "shape": "round", "d": 0.7, "width": 0.02, "color": "metal"}
+  ],
+  "glow": {"r": 0.9, "strength": 0.55}
+ },
+ "square-2x2-troffer": {
+  "parts": [
+   {"kind": "fill", "shape": "square", "w": 2.0, "color": "trim"},
+   {"kind": "line", "shape": "square", "w": 2.0, "width": 0.03},
+   {"kind": "fill", "shape": "square", "w": 1.7, "color": "lit"},
+   {"kind": "slots", "shape": "square", "w": 1.7, "n": 3, "angle": 0, "width": 0.02, "color": "metal"}
+  ],
+  "glow": {"r": 1.5, "strength": 0.5}
+ },
+ "linear-4ft-slot": {
+  "parts": [
+   {"kind": "fill", "shape": "rect", "w": 4.0, "l": 0.33, "color": "dark"},
+   {"kind": "fill", "shape": "rect", "w": 3.9, "l": 0.2, "color": "lit"}
+  ],
+  "glow": {"r": 1.0, "strength": 0.5}
+ }
+}

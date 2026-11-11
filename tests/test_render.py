@@ -9,7 +9,7 @@ Three checks, from strict to loose:
   3. image:     the linework image is close to tests/reference/lobby_linework.png. Text and soft edges are drawn
                 a little differently by different OpenCV versions, so this check allows small differences.
 """
-import csv, os, shutil, sys, tempfile
+import csv, json, os, shutil, sys, tempfile
 import numpy as np
 import cv2
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
@@ -73,6 +73,18 @@ def main(update=False):
     if not good:
         cv2.imwrite(os.path.join(tmp, "diff.png"), diff.astype(np.uint8)*255)
         print(f"      result {os.path.join(proj, 'out', 'linework.png')}, differences {os.path.join(tmp, 'diff.png')}")
+    ok &= good
+    # 4. coffers() and the fixture type: one fixture in every full coffer (14 x 30 in the lobby)
+    d = json.load(open(os.path.join(proj, "design.json")))
+    d["fixtures"] = json.load(open(os.path.join(ROOT, "examples", "fixtures.json")))
+    d["layers"].append({"name": "Coffer fixtures", "features": [{"type": "fixture", "fixture": "round-12in-downlight",
+        "x": "coffers('Waffle', 'x')", "z": "coffers('Waffle', 'z')", "y": "coffers('Waffle', 'y')"}]})
+    json.dump(d, open(os.path.join(proj, "design.coffers.json"), "w"))
+    rep = render(proj, linework=True, out_name="coffers.png", design_file="design.coffers.json")
+    fx = [r for r in rep if r["type"] == "fixture"]
+    good = len(fx) == 420 and len({r["x"] for r in fx}) == 14 and sum(bool(r["visible"]) for r in fx) > 50
+    print(f"{'PASS' if good else 'FAIL'}  coffer fixtures: {len(fx)} (expected 420 = 14 x 30), "
+          f"{sum(bool(r['visible']) for r in fx)} visible")
     ok &= good
     return ok
 

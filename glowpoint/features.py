@@ -24,6 +24,7 @@ class Canvas:
         self.img = base.copy()        # linework and outlines
         self.over = base.copy()       # light, blended in at the end
         self.report = []
+        self.fixtures = {}
 
     def raycast(self):
         self.ids, self.P, self.dep = self.m.raycast(self.img.shape[:2])
@@ -90,6 +91,8 @@ def waffle_draw(cv, f, base):
     tmin = np.minimum(tt, np.minimum(tx, tz))
     face = np.where(on_rib, 0, np.where(tmin == tt, 1, np.where(tmin == tx, 2, 3)))
     hit = Q + np.where(on_rib, 0, tmin)[:, None]*D
+    cv.P[mask] = hit                                   # true 3D point: rib bottom, coffer top or coffer wall
+    cv.dep[mask] = m.depth(hit)
     gu = np.clip(1-np.abs(hit[:, 0]-(cx0+cx1)/2)/((cx1-cx0)/2), 0, 1)
     gv = np.clip(1-np.abs(hit[:, 2]-(cz0+cz1)/2)/((cz1-cz0)/2), 0, 1)
     over = base.copy(); sub = over[mask]
@@ -232,4 +235,92 @@ def pendant(cv, f):
         cv.add(f, "pendant", f["plane"], [x, y, z], visible=True)
 
 
-LIGHTS = dict(downlight=downlight, sconce=sconce, uplight=uplight, wash=wash, pendant=pendant)
+# ---------------------------------------------------------------- drawn fixtures
+COLORS = {"lit": (175, 238, 255), "trim": (238, 238, 238), "metal": (190, 190, 190), "dark": (60, 60, 60),
+          "black": (20, 20, 20), "white": (255, 255, 255)}
+
+
+def _color(c):
+    return tuple(int(v) for v in (COLORS[c] if isinstance(c, str) else c[::-1]))   # names, or [R, G, B]
+
+
+def _shape_dist(shape, u, v, part):
+    """Signed distance (ft) from the outline of a part: < 0 inside. u, v are local plane coordinates."""
+    if shape == "round":
+        return np.hypot(u, v) - part["d"]/2
+    w = part.get("w", part.get("d")); l = part.get("l", w)
+    return np.maximum(np.abs(u) - w/2, np.abs(v) - l/2)
+
+
+def fixture(cv, f):
+    """A fixture drawn from its parts, flush on a surface. The parts come from the fixture list
+    (design.json "fixtures", or <project>/fixtures.json)."""
+    m = cv.m
+    spec = cv.fixtures.get(f["fixture"]) if isinstance(f["fixture"], str) else f["fixture"]
+    if spec is None:
+        raise KeyError(f"No fixture named '{f['fixture']}'. Known: {sorted(cv.fixtures)}")
+    if "y" in f and "plane" not in f:
+        s = dict(name=f.get("surface_name", "ceiling"), axis=1, at=None)
+    else:
+        s = m.surface(f["plane"])
+    a = s["axis"]
+    size = max(max(p.get("d", 0), p.get("w", 0), p.get("l", 0)) for p in spec["parts"])
+    rot = np.radians(f.get("rotate", 0)); cr, sr = np.cos(rot), np.sin(rot)
+    glow = spec.get("glow")
+    H, W = cv.ids.shape
+    if a == 1: keys = [("x", "z")]
+    else: keys = [("along", "y")]
+    for p1, p2 in itertools.product(as_list(f[keys[0][0]]), as_list(f[keys[0][1]])):
+        if a == 1:
+            at = f["y"] if "y" in f else s["at"]; c = [p1, at, p2]; ui, vi = 0, 2
+        elif a == 0:
+            at = s["at"]; c = [at, p2, p1]; ui, vi = 2, 1
+        else:
+            at = s["at"]; c = [p1, p2, at]; ui, vi = 0, 1
+        # pixels near this fixture: bounding box of its projected footprint
+        r = size/2 + (glow.get("r", 0) if glow else 0)
+        corners = []
+        for du, dv in ((-r, -r), (r, -r), (r, r), (-r, r)):
+            q = list(c); q[ui] += du; q[vi] += dv; corners.append(q)
+        pc = m.project(corners)
+        if not np.all(np.isfinite(pc)) or np.any(m.depth(corners) <= 0):
+            cv.add(f, "fixture", f.get("plane", "y=%g" % at), c, visible=False); continue
+        x0, y0 = np.floor(pc.min(0)).astype(int) - 2; x1, y1 = np.ceil(pc.max(0)).astype(int) + 3
+        x0, y0 = max(x0, 0), max(y0, 0); x1, y1 = min(x1, W), min(y1, H)
+        if x0 >= x1 or y0 >= y1:
+            cv.add(f, "fixture", f.get("plane", "y=%g" % at), c, visible=False); continue
+        P = cv.P[y0:y1, x0:x1]
+        on = (np.abs(P[..., a] - at) < 0.02) & (cv.ids[y0:y1, x0:x1] >= 0)
+        du = P[..., ui] - c[ui]; dv = P[..., vi] - c[vi]
+        u = cr*du + sr*dv; v = -sr*du + cr*dv
+        gy, gx = np.gradient(u); px = np.hypot(gx, gy) + 1e-9          # ft per pixel here
+        drawn = np.zeros(on.shape, bool)
+        img = cv.img[y0:y1, x0:x1]
+        for part in spec["parts"]:
+            kind = part.get("kind", "fill"); shape = part.get("shape", "round")
+            dist = _shape_dist(shape, u, v, part)
+            if kind == "fill":
+                k = on & (dist <= 0)
+            elif kind == "line":
+                k = on & (np.abs(dist) <= np.maximum(part.get("width", 0.04)/2, 0.6*px))
+            elif kind == "slots":
+                n = part.get("n", 3); ang = np.radians(part.get("angle", 0))
+                t = np.cos(ang)*u + np.sin(ang)*v
+                span = part.get("w", part.get("d")); pitch = span/(n+1)
+                k = on & (dist <= 0) & (np.abs(((t + span/2)/pitch) - np.round((t + span/2)/pitch))*pitch
+                                        <= np.maximum(part.get("width", 0.03)/2, 0.6*px)) & (np.abs(t) < span/2)
+            else:
+                raise ValueError(f"unknown fixture part kind '{kind}' (fill, line, slots)")
+            if k.any():
+                img[k] = _color(part.get("color", "black" if kind != "fill" else "lit"))
+                drawn |= k
+        if glow:
+            d3 = np.linalg.norm(P - np.array(c), axis=-1)
+            g = glow.get("strength", 0.6)*np.exp(-(d3/glow.get("r", 1.0))**2)
+            sub = cv.over[y0:y1, x0:x1]; kk = (g > 0.03) & ~drawn & (cv.ids[y0:y1, x0:x1] >= 0)
+            for ch, val in enumerate(GLOW):
+                sub[..., ch][kk] = (sub[..., ch][kk]*(1-g[kk]) + val*g[kk]).astype(np.uint8)
+        cv.add(f, "fixture", f.get("plane", "y=%g" % at), c, visible=bool(drawn.any()), note=f["fixture"] if isinstance(f["fixture"], str) else "")
+
+
+LIGHTS = dict(downlight=downlight, sconce=sconce, uplight=uplight, wash=wash, pendant=pendant, fixture=fixture)

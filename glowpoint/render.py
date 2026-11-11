@@ -23,7 +23,7 @@ GEOMETRY = {"waffle": (F.waffle_prepare, F.waffle_draw)}
 
 
 def evaluate(f, ns):
-    return {k: (ev(v, ns) if k not in ("layer", "type", "name", "note", "plane", "slot") else v) for k, v in f.items()}
+    return {k: (ev(v, ns) if k not in ("layer", "type", "name", "note", "plane", "slot", "fixture", "surface_name") else v) for k, v in f.items()}
 
 
 def legend(img, title, layers, at="bottom-left"):
@@ -133,12 +133,28 @@ def render(project, check=False, out_name="concept.png", design_file="design.jso
             if f["type"] in geometry:
                 fe = evaluate(f, ns); fe["layer"] = L["name"]; geometry[f["type"]][0](m, fe); geo.append(fe)
     cv = F.Canvas(m, base); cv.raycast()
+    cv.fixtures = {}
+    fx_file = os.path.join(project, "fixtures.json")
+    if os.path.exists(fx_file): cv.fixtures.update(json.load(open(fx_file)))
+    cv.fixtures.update(design.get("fixtures", {}))
+    cv.fixtures = {k: v for k, v in cv.fixtures.items() if not k.startswith("_")}
     for fe in geo:
         base = geometry[fe["type"]][1](cv, fe, base)
     cv.img = base.copy(); cv.over = base.copy()
     # 2. lights: may refer to what is visible
     vis = [(s, int((ref_ids == i).sum())) if i < ref_ids.max()+1 else (s, 0) for i, s in enumerate(m.surfaces)]
     ns = namespace(m, visible=vis); ns.update(extra())
+    waffles = {fe.get("name", "Waffle"): fe for fe in geo if fe["type"] == "waffle"}
+
+    def coffers(name="Waffle", axis="x"):
+        """Centres of the full coffers of a waffle: axis 'x' or 'z' gives a list, 'y' the coffer top height."""
+        if name not in waffles: raise KeyError(f"No waffle named '{name}'. Known: {sorted(waffles)}")
+        w = waffles[name]; (x0, x1), (z0, z1) = w["X"], w["Z"]; mod = w["module"]
+        if axis == "x": return [x0 + (i+0.5)*mod for i in range(int((x1-x0)/mod + 0.01))]
+        if axis == "z": return [z1 - (j+0.5)*mod for j in range(int((z1-z0)/mod + 0.01))]
+        if axis == "y": return m.surface(w.get("plane", "Ceiling"))["at"] + w["depth"]
+        raise ValueError("axis must be 'x', 'z' or 'y'")
+    ns["coffers"] = coffers
     for L in layers:
         for f in L["features"]:
             if f["type"] in geometry: continue
