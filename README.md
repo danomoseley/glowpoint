@@ -943,7 +943,8 @@ A chat sandbox (ChatGPT, or any session with a zip and no GitHub access) can cha
 ```bash
 python3 -m glowpoint.doctor                       # at the start: saves the original files in local/.baseline/ (when there is no .git)
 python3 -m glowpoint.patch status                 # which core files changed
-python3 -m glowpoint.patch make "Fix round coffer size" --why "diameter was read as radius"
+python3 -m glowpoint.patch make "Fix round coffer size" --why "diameter was read as radius" \
+    --changelog "waffle: round d is the diameter"
                                                   # writes local/patches/<date>-fix-round-coffer-size.patch and runs the tests
 python3 -m glowpoint.patch make "..." --base glowpoint-main.zip   # compare with the uploaded zip instead
 python3 -m glowpoint.patch apply FILE.patch       # apply a patch (git apply, patch -p1, or a built-in applier)
@@ -951,7 +952,9 @@ python3 -m glowpoint.patch apply FILE.patch       # apply a patch (git apply, pa
 
 The patch file starts with a header (title, reason, glowpoint version, base, changed files, test results), then a normal unified diff. `local/`, drawings, `out/`, and zips are never in a patch. Binary files are listed in the header but not included.
 
-To accept a patch: `git apply --check FILE.patch && git apply FILE.patch`, read the change, run the tests, commit, and push. When a new zip is used in a session that has old patches, the agent applies them again with `patch apply` (they fail cleanly if the change is already in the new version).
+**Version numbers.** A patch never changes the version or `CHANGELOG.md`: if two sessions both raised 0.11.0 to 0.12.0, there would be two different 0.12.0s. The session gives its changelog line with `--changelog`, and the line goes in the patch header. The header also says which version the session started from. If the session changed the version or the changelog anyway, `make` leaves those files out and moves the new changelog lines into the header.
+
+To accept a patch: `python3 -m glowpoint.patch apply FILE.patch` (or `git apply`), read the change, and run the tests. Then raise the version to the next number after the current one, add the changelog lines from the header, commit, and push. `apply` prints these steps and the lines. When a new zip is used in a session that has old patches, the agent applies them again with `patch apply` (they fail cleanly if the change is already in the new version).
 
 `python3 tests/test_patch.py` tests this: it makes a patch in a copy without git and applies it to a clean copy.
 

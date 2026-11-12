@@ -123,12 +123,32 @@ def run_tests(root):
     return res
 
 
-def make(root, title, why="", base=None, tests=True):
+VERSION_FILE, CHANGELOG = "glowpoint/__init__.py", "CHANGELOG.md"
+
+
+def _version(data):
+    m = re.search(rb'__version__\s*=\s*"([^"]+)"', data or b"")
+    return m.group(1).decode() if m else "unknown"
+
+
+def make(root, title, why="", base=None, tests=True, changelog=""):
     base_files, base_desc = load_base(root, base)
     changed, added, removed = changes(root, base_files)
+    cur = tracked_files(root)
+    # The maintainer chooses the version number and writes CHANGELOG.md when the patch goes in.
+    # A session never does: two sessions would both choose the same next number.
+    log = [l.strip() for l in changelog.splitlines() if l.strip()]
+    held = [r for r in (VERSION_FILE, CHANGELOG) if r in changed]
+    if CHANGELOG in held:
+        old = base_files[CHANGELOG].decode("utf-8").splitlines(); new = _read(cur[CHANGELOG]).decode("utf-8").splitlines()
+        log += [l[1:].strip() for l in difflib.unified_diff(old, new, lineterm="", n=0)
+                if l.startswith("+- ") and l[1:].strip() not in log]
+    changed = [r for r in changed if r not in held]
+    if held:
+        print("note: the version number and CHANGELOG.md are not in the patch; the maintainer sets them."
+              + (" The changelog lines are in the patch header." if log else ""))
     if not (changed or added or removed):
         print("no core changes compared with the base"); return None
-    cur = tracked_files(root)
     parts, skipped = [], []
     for rel in changed + added:
         new = _read(cur[rel]); old = base_files.get(rel)
@@ -138,14 +158,13 @@ def make(root, title, why="", base=None, tests=True):
     for rel in removed:
         if _is_text(rel, base_files[rel]): parts.append(unified(rel, base_files[rel], None))
         else: skipped.append(rel)
-    try:
-        sys.path.insert(0, root); from glowpoint import __version__ as ver
-    except Exception:
-        ver = "unknown"
+    ver = _version(base_files.get(VERSION_FILE))
     results = run_tests(root) if tests else []
     now = datetime.datetime.now()
     header = [f"Subject: {title}", "", f"glowpoint version: {ver}", f"base: {base_desc}", f"date: {now:%Y-%m-%d %H:%M}", ""]
     if why: header += ["Why:", why, ""]
+    header += ["Changelog (the maintainer adds these lines under the next version number):"] + \
+              ([f"  {l if l.startswith('- ') else '- ' + l}" for l in log] or ["  (none given)"]) + [""]
     header += ["Files:"] + [f"  changed  {r}" for r in changed] + [f"  added    {r}" for r in added] + \
               [f"  removed  {r}" for r in removed]
     if skipped:
@@ -218,8 +237,22 @@ def _py_apply(root, text, check=False):
     return problems
 
 
+def _after_apply(path):
+    head = open(path, encoding="utf-8").read().split("\n---\n", 1)[0]
+    m = re.search(r"(?ms)^Changelog.*?:\n(.*?)(?:\n\n|\Z)", head)
+    print("Next (maintainer): read the change, run the tests, raise __version__ in glowpoint/__init__.py "
+          "(the next number after the current one), and add the changelog lines under it:")
+    print(m.group(1) if m else "  (the patch has no changelog lines: write one)")
+
+
 def apply(root, path):
     """Apply a patch: git apply, then patch -p1, then the small built-in applier. All or nothing."""
+    ok = _apply(root, path)
+    if ok: _after_apply(path)
+    return ok
+
+
+def _apply(root, path):
     try:
         if subprocess.run(["git", "apply", "--check", path], cwd=root, capture_output=True).returncode == 0:
             subprocess.run(["git", "apply", path], cwd=root, check=True); print("applied with git apply"); return True
@@ -247,6 +280,7 @@ def main(argv=None):
     s = sub.add_parser("status"); s.add_argument("--base")
     mk = sub.add_parser("make"); mk.add_argument("title"); mk.add_argument("--why", default="")
     mk.add_argument("--base"); mk.add_argument("--no-tests", action="store_true")
+    mk.add_argument("--changelog", default="", help="the line for CHANGELOG.md (do not edit CHANGELOG.md or the version)")
     a_ = sub.add_parser("apply"); a_.add_argument("file")
     a = ap.parse_args(argv)
     if a.cmd == "status":
@@ -257,7 +291,7 @@ def main(argv=None):
         for r in rm: print("  removed ", r)
         if not (ch or ad or rm): print("  no core changes")
     elif a.cmd == "make":
-        make(ROOT, a.title, a.why, a.base, not a.no_tests)
+        make(ROOT, a.title, a.why, a.base, not a.no_tests, a.changelog)
     else:
         return 0 if apply(ROOT, os.path.abspath(a.file)) else 1
     return 0

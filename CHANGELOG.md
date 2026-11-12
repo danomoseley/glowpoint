@@ -3,6 +3,9 @@
 Newest first. Each version says what a user or an agent will notice. The version is in
 `glowpoint/__init__.py`, and `python3 -m glowpoint.doctor` prints it.
 
+## 0.11.1 — 2026-11-12
+- `glowpoint.patch make`: patches never change the version number or CHANGELOG.md; the changelog line goes in the header (`--changelog`), and the maintainer sets the version when the patch goes in. `apply` prints these steps.
+
 ## 0.11.0 — 2026-11-12
 - `glowpoint.patch`: a session that cannot push (ChatGPT, a zip) can change the code and send the change back as a `.patch` file; `apply` re-applies a patch, also without git. `doctor` saves the original files as the base.
 - Agents: rule 18 (core code changes and patches); the updated-zip steps re-apply patches.
