@@ -113,6 +113,20 @@ from glowpoint import calibrate, measure, zoom                  # each tool has 
 measure.main(["glowpoint-main/projects/lobby", "floor", "302", "444"])
 ```
 
+**Updating a session that already has glowpoint.** Download the new zip, upload it to the same conversation, and send this message with it. It works also when the old version in the session is older than these instructions:
+
+```text
+Here is a newer version of glowpoint. Update without losing my work:
+1. First make a zip of everything in local/ in the current glowpoint folder (my projects: drawings, model.json, design.json, types/, fixtures.json) and give it to me to download as a backup. If the files from earlier in this conversation are gone, tell me, and do not continue.
+2. Tell me if you changed any glowpoint files outside local/ earlier in this conversation. Do not copy them to the new version.
+3. Rename the old folder, unzip the new zip into a new folder, and run python3 -m glowpoint.doctor there.
+4. Read the new AGENTS.md completely and follow it from now on, starting at "When the user sends an updated zip", step 3.
+5. If you changed glowpoint code in the old folder, make a file of those changes with the new version (from the new folder: python3 -c "from glowpoint.patch import make; make('OLD_FOLDER', 'changes from an older session', base='THE_OLD_ZIP')"), and give it to me.
+6. Render my current project with the new version, send me the image, and tell me what changed compared with the last image.
+```
+
+If the backup in step 1 is all that is left (for example after the sandbox was reset), start a new conversation, upload the new zip and the backup zip, and ask the assistant to put the backup projects into `local/`.
+
 **Code changes in a sandbox.** A sandbox cannot push to GitHub. If the assistant changes the glowpoint code there (for example to fix a bug), it runs `python3 -m glowpoint.patch make "title" --why "..."` and gives you a `.patch` file. Send that file to the person who looks after glowpoint, or attach it to a GitHub issue. See [Patches from sessions that cannot push](#patches-from-sessions-that-cannot-push).
 
 If OpenCV has no LSD line detector (some versions), the camera setup uses a Hough line detector instead. It is a little less accurate (lens within about 1 % on the test images, instead of 0.3 %). `glowpoint.doctor` tells you which one you have.
