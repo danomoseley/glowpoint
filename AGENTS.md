@@ -29,7 +29,7 @@ When a user gives you this repository (often only a zip, with no other instructi
 13. **After a code change, run the tests:** `python3 tests/test_docs.py`, `python3 tests/test_render.py`, `python3 tests/test_calibrate.py`, and `python3 tests/test_detect.py`.
 
 14. **Draw only with glowpoint.** Never edit or draw on the user's image yourself, and never make an image with an image-generation tool. Show the user only files that glowpoint wrote in the project's `out/` folder, and give the path of each one.
-15. **Stop after the model setup.** Send the user `out/check.png` as an image (rule 16), give the main numbers of the calibration report in plain words, and list what you modelled and what you assumed. Design lighting only after the user confirms the model: if the model is wrong, every light is wrong.
+15. **Stop after the model setup.** Send the user `out/check.png` as an image (rule 16), give the main numbers of the calibration report in plain words, and list what you modelled and what you assumed. Remind the user in one or two lines how to check it (edges on the drawn lines, grid in the drawing's directions, 4 ft squares), and **point out the parts you are least sure of** (for example a hidden end of an object, or a scale from an assumed dimension), so the user looks there first. Design lighting only after the user confirms the model: if the model is wrong, every light is wrong.
 16. **Send the image after every render.** After each render, put the image file itself into the conversation, so the user sees the picture: `out/concept.png` after a lighting change (or the `--out` name you used), `out/check.png` after a model setup. Display it or attach it as a file, with its path. A file name, a description, or a link to a folder is not enough. Then give a short plain-text list of the lights (type, count, spacing, heights) from `out/positions.csv`.
     **Do not paste JSON** (design.json, model.json, positions.csv) as your answer. The user wants the picture. Show JSON only when the user asks for it.
 17. **Show the user the how-to** (the section "How-to for the user" below) at the start of a new conversation (see "Start of a conversation"), and again when the user seems unsure what to ask. Show it as it is written; you can shorten it if the user already knows glowpoint.
@@ -49,7 +49,15 @@ Show this to the user (rule 17):
 > - **one or two real dimensions**, for example "the ceiling is 10 ft high" or "the door is 7 ft",
 > - anything I cannot see in the image, for example "the coffers are 6 in deep".
 >
-> I build a simple 3D model of the space and show you a check image with a grid on each surface. **Look at it and confirm it, or tell me what is wrong.** Every light depends on it.
+> I build a simple 3D model of the space and show you a **check image**: your drawing with each surface of the model tinted in a colour, with its name, and a grid of 4 ft squares drawn on it. **Look at it and confirm it, or tell me what is wrong.** Every light depends on it.
+>
+> **How to check it:**
+> - **Edges:** each coloured area must cover exactly its part of the drawing (the floor, each wall, the ceiling, each column or object), with its edges on the drawn lines.
+> - **Grid:** the grid lines must run in the same directions as the lines in your drawing (floor joints, ceiling lines, wall bases), and get smaller into the distance at the same rate.
+> - **Size:** the squares are 4 ft. A door (about 7 ft) is a little less than two squares high, a desk top (about 2.5 ft) a little more than half a square. If the sizes look wrong, the scale is wrong: give me a real dimension.
+> - **Missing or extra:** every object that you want to light, or that lights must refer to, must have its own coloured box (a desk, a column, a bench).
+>
+> If something is wrong, tell me in plain words, for example: "the ceiling is too low", "the right wall ends at the window", "the desk is longer than that", "there is a column missing at the back", "the ceiling is 12 ft, not 10". I correct the model and send a new check image.
 >
 > **Stage 2 – the lighting.** Describe what is lit and where the light comes from. Good requests name:
 > - **the surface or object:** "the wall behind the desk", "every column", "the ceiling over the aisle";
