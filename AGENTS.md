@@ -2,7 +2,7 @@
 
 glowpoint places lighting concepts on a perspective image of a space. The full reference is [README.md](README.md).
 
-**Read sections 1 to 5 now.** Section 6, "Rare situations", has the steps for things that seldom happen (an updated zip, a change to the glowpoint program, a shared plugin, a push to GitHub). Read the part you need when one of them happens.
+**Read sections 1 and 2 before your first reply, and sections 3 to 5 before you start the work.** Section 6, "Rare situations", has the steps for things that seldom happen (an updated zip, a change to the glowpoint program, a shared plugin, a push to GitHub). Read the part you need when one of them happens.
 
 ## 1. Start of a conversation
 
@@ -68,7 +68,7 @@ Then name the one or two parts you are least sure of (rule 5). Show the full che
 ## 3. Everyday rules
 
 1. **Draw only with glowpoint.** Never edit or draw on the user's image yourself, and never use an image-generation tool. Show the user only files that glowpoint wrote in the project's `out/` folder, and `docs/menu.png`.
-2. **Use the original drawing.** `drawing.png` must be the file that the user gave you, not an output from `out/` and not an image with lights or coffers already drawn on it. glowpoint marks its own PNG outputs and refuses them, but screenshots and JPEG copies lose that mark. If a conversation has several images, confirm which one is the original. If the drawing already shows coloured lights or coffers, stop and ask.
+2. **Use the original drawing.** `drawing.png` must be the file that the user gave you, not an output from `out/` and not an image with lights or coffers already drawn on it. glowpoint marks its own PNG outputs and refuses them, but screenshots and JPEG copies lose that mark. If a conversation has several images, confirm which one is the original (with one image, do not ask). If the drawing already shows coloured lights or coffers, stop and ask.
 3. **Never estimate positions by eye.** Get pixel positions with `glowpoint.zoom`, and turn them into feet with `glowpoint.measure`.
 4. **Model first, then lighting.** Geometry goes in `model.json`, lighting in `design.json`. Add an object (a desk, bench, or stair is a box) to `model.json` before you refer to it. In `design.json`, use relationships for anything that depends on the architecture: `"spaced(box('Desk').z0, box('Desk').z1, 3)"`, not three numbers, so the lights follow when the model is corrected.
 5. **Stop after the model setup.** Send `out/check.png` (rule 6), say in plain words what you modelled and assumed, ask the question of Part B, and **name the one or two parts you are least sure of** (for example a hidden end of an object, or a scale from an assumed dimension). Design lighting only after the user confirms the model: if the model is wrong, every light is wrong. This holds even when the user already described the lighting: send no draft before the confirmation, because a wrong first result costs more trust than a short wait. Say in one line that you will draw it as soon as they confirm, and keep their description.
@@ -192,7 +192,7 @@ Table lamps, floor lamps, candles: `glow` at the lamp shade (measure the shade w
    - Look at the overlay image: each color must be one real direction of the room.
    - Give `--known` two or three times when you can. If the report says they disagree by more than 10%, find the odd one out (its line shows it) and ask the user for a real dimension if none is reliable.
    - For `--known`, use a vertical with a known height: a door frame (often 7 ft), a column edge from floor to ceiling, or a person (about 5 ft 8 in). Both pixels are on the same vertical edge (it may lean in a three-point image). Find them with `zoom`.
-   - One-point images: the lens cannot be found from lines; see the README.
+   - One-point images, and "nearly one-point" in the report: the lens from the lines is not reliable; see the README (One-point images).
 2. **model.json:** start it from the skeleton in the README, with the camera from `camera.json`. You do not need a `design.json` yet.
 3. **Surfaces and boxes:** for each corner you need:
    - `python3 -m glowpoint.zoom <image>` to see the whole image with a coarse grid,
@@ -203,6 +203,8 @@ Table lamps, floor lamps, candles: `glow` at the lamp shade (measure the shade w
    Furniture and columns: `measure <project> box X1 Y1 X2 Y2 [X3 Y3] --top X Y --name NAME [--snap "Left wall"]` prints the box line for model.json.
    Pixels: whole numbers are pixel centres; use fractions (302.5) far away, where one pixel can be more than 0.5 ft.
    Hidden parts: find the limits from the edge that hides them, choose a value inside (usually by symmetry), and write it in the box's `"note"`.
+   When measurements disagree, trust the nearest and largest objects (fewer feet per pixel), copy repeated objects (a row of equal columns) from the best-measured one, and name the doubtful value as one of the parts you are least sure of (rule 5).
+   Model the room and the objects that lighting will probably refer to (columns, desks, counters, steps). Leave out far details, and say what you left out.
 4. **Check:** `python3 -m glowpoint.render <project> --check`, look at `out/check.png`, and zoom on the corners with `--model <project>` (red = model edges). Compare corners in numbers with `measure <project> project X Y Z`. Fix and repeat.
 5. **Coffers in the drawing:** if the ceiling shows coffers, run `python3 -m glowpoint.detect coffers <project> --depth FT --add` and check `out/detect_coffers.png` (see "Task: coffered ceilings").
 6. **Stop and send the user** `out/check.png` as an image, with the calibration result and what you modelled and assumed (rules 5 and 6). Wait for confirmation.

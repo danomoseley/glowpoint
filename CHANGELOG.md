@@ -3,6 +3,9 @@
 Newest first. Each version says what a user or an agent will notice. The version is in
 `glowpoint/__init__.py`, and `python3 -m glowpoint.doctor` prints it.
 
+## 0.13.4 — 2026-11-12
+- From a cold test with a fresh agent: `calibrate` warns for nearly one-point images (the lens from lines is not reliable); `project save` never overwrites a save from the same minute; a clearer note when there is no design.json yet. AGENTS: read sections 1–2 before the first reply; do not ask about the original with one image; what to do when measurements disagree, and what to model.
+
 ## 0.13.3 — 2026-11-12
 - AGENTS.md reorganized: everyday rules first (12 rules), rare situations (restore, updated zip, program changes, shared types, push) in a last section that agents read only when needed. The rules are the same; the everyday part is about 30 % shorter.
 

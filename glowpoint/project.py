@@ -32,7 +32,11 @@ def save(project, out=None):
     if not os.path.exists(os.path.join(project, "model.json")):
         raise SystemExit(f"{project} has no model.json: it is not a glowpoint project")
     now = datetime.datetime.now()
-    out = out or os.path.join(ROOT, "local", "backups", f"{name}-{now:%Y%m%d-%H%M}.zip")
+    if not out:
+        base = os.path.join(ROOT, "local", "backups", f"{name}-{now:%Y%m%d-%H%M}")
+        out, k = base + ".zip", 1
+        while os.path.exists(out):                  # two saves in one minute: never overwrite
+            k += 1; out = f"{base}-{k}.zip"
     os.makedirs(os.path.dirname(out), exist_ok=True)
     files = []
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:

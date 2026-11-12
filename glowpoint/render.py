@@ -119,7 +119,7 @@ def render(project, check=False, out_name="concept.png", design_file="design.jso
         design = json.load(open(dpath))
     elif design_file == "design.json":
         design = {"layers": [], "legend": False}          # new project: check the model before any design
-        print(f"note: {dpath} not found; rendering the model with no lights")
+        print(f"note: no {os.path.basename(dpath)} yet (normal during the model setup); drawing the model with no lights")
     else:
         raise FileNotFoundError(dpath)
     has_drawing = os.path.exists(m.drawing)

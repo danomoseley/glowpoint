@@ -140,6 +140,11 @@ def solve_camera(vps, c, scale, f_given=None):
         for a, b in pairs:
             f2 = -np.dot(a-pp, b-pp)
             if f2 > 0: f = float(np.sqrt(f2)); break
+    if f is not None and f_given is None and kind == "two-point":
+        far = max(np.linalg.norm(fin[id(d)] - pp) for d in finite_h) / scale
+        if far > 6:
+            notes.append(f"nearly one-point: one vanishing point is {far:.0f} image widths away, so the lens from the lines "
+                         "is not reliable. Check it with a known depth or a square object (README, One-point images) and give --f")
     if f is None:
         notes.append("the lens cannot be found from the lines in a one-point view: give --f (or measure a square)")
         return dict(kind=kind, f=None, principal=pp.tolist(), notes=notes), None

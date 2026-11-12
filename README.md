@@ -879,7 +879,9 @@ Run `python3 -m glowpoint.render projects/new --check` and look at `out/check.pn
 
 ### One-point images and hand drawings
 
-For a one-point image, set the lens from something square in plan, for example a column: if its front corner is at pixel x1 and its back corner (same side) at x2, and the front face is w pixels wide, then `f = w / ((x1 − vp_x)/(x2 − vp_x) − 1)`. Average several measurements on a hand drawing.
+For a one-point image, set the lens from something square in plan, for example a column: if its front corner is at pixel x1 and its back corner (same side) at x2, and the front face is w pixels wide, then `f = w / ((x1 − vp_x)/(x2 − vp_x) − 1)`. Average several measurements on a hand drawing, and prefer the nearest, largest objects (fewer feet per pixel). If they still disagree widely, ask the user for a known depth (for example the column spacing or a tile size): it fixes the lens best.
+
+**Nearly one-point images** (one vanishing point far outside the image): `calibrate` finds a lens, but it is not reliable, and the report says "nearly one-point". Check the lens as for a one-point image, and give it with `--f`.
 
 Hand drawings are not exact. Match the model to the drawing, not to an ideal grid.
 
