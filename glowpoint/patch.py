@@ -115,7 +115,7 @@ def unified(rel, old, new):
 
 def run_tests(root):
     res = []
-    for t in ("tests/test_docs.py", "tests/test_render.py", "tests/test_calibrate.py", "tests/test_detect.py", "tests/test_patch.py"):
+    for t in ("tests/test_docs.py", "tests/test_render.py", "tests/test_calibrate.py", "tests/test_detect.py", "tests/test_patch.py", "tests/test_project.py"):
         if not os.path.exists(os.path.join(root, t)): continue
         r = subprocess.run([sys.executable, "-W", "ignore", t], cwd=root, capture_output=True, text=True)
         lines = [l for l in r.stdout.splitlines() if l.startswith(("PASS", "FAIL"))]

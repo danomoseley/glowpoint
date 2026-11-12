@@ -10,12 +10,14 @@ When a user gives you this repository (often only a zip, with no other instructi
 2. Run `python3 -m glowpoint.doctor`. If it says NOT READY, tell the user what is missing and stop.
 3. Show the user Part A of the how-to (section "How-to for the user"). Do not show the other parts yet.
 4. If the user has not sent a sketch or render yet, ask for it, and for one or two real dimensions. If they sent one, start "Task: set up a new image" (and still ask for a real dimension if they gave none).
-5. If the user only wants to try the tool, use the lobby example: copy `projects/lobby` to `local/lobby` and render it with `--linework` (its drawing is not in the repository).
+5. If the user also uploads a **project file** (a zip with `glowpoint-project.json` in it, or a zip of a project folder), restore it with `python3 -m glowpoint.project restore <file>`, render it, send the image, and continue that project.
+6. If the user only wants to try the tool, use the lobby example: copy `projects/lobby` to `local/lobby` and render it with `--linework` (its drawing is not in the repository).
 
 ## When the user sends an updated zip
 
 The user may send a newer version of glowpoint in the middle of a session. A zip from GitHub does **not** contain the user's projects (`local/` is not in the repository), so never replace or delete the old folder.
 
+0. First save each project (rule 19) and send the files to the user, so nothing is lost if something goes wrong.
 1. Unzip the new zip into a **new** folder (for example `glowpoint-new/`), not over the old one. The zip from GitHub always unzips to `glowpoint-main/`, so rename one of them first.
 2. Run `python3 -m glowpoint.doctor` in the new folder. Compare its version with the old one (`glowpoint/__init__.py`).
 3. Copy the user's projects from the old `local/` folder into the new `local/` folder (the whole project folders, with the drawings, model.json, design.json, and any `types/` and `fixtures.json`), and `local/patches/` if it exists. Do **not** copy `local/.baseline/`: the new folder has its own.
@@ -40,7 +42,7 @@ If the new version stops with an error on the user's project, tell the user, con
 10. **Edit JSON files by inserting or changing text**, not by writing the whole file again with a JSON library. That keeps the layout and the diffs small. In `design.json`, most text values are expressions; only `layer`, `type`, `name`, `note`, `plane`, `slot`, `fixture`, `shape`, `align`, `kind`, `direction`, `color`, `ceiling`, `style`, `top`, `mounting`, `head`, `wall`, `box`, `edge`, `pattern`, `bands_along` are plain text (and `aperture` when it is a size name such as `S`) (see the README).
 11. **Do not edit `projects/lobby` for experiments.** Copy it to `local/` first.
 12. **Before every commit and push, update README.md, AGENTS.md, and CHANGELOG.md** (raise the version in `glowpoint/__init__.py` for a change in behaviour; a session that cannot push does not, see rule 18) so they describe every change: new types, options, expressions, tools, and behaviour. `python3 tests/test_docs.py` checks this. Turn on the pre-push hook once in each clone with `git config core.hooksPath .githooks`: it runs the documentation test and all tests, and stops a push that fails.
-13. **After a code change, run the tests:** `python3 tests/test_docs.py`, `python3 tests/test_render.py`, `python3 tests/test_calibrate.py`, `python3 tests/test_detect.py`, and `python3 tests/test_patch.py`.
+13. **After a code change, run the tests:** `python3 tests/test_docs.py`, `python3 tests/test_render.py`, `python3 tests/test_calibrate.py`, `python3 tests/test_detect.py`, `python3 tests/test_patch.py`, and `python3 tests/test_project.py`.
 
 14. **Draw only with glowpoint.** Never edit or draw on the user's image yourself, and never make an image with an image-generation tool. Show the user only files that glowpoint wrote in the project's `out/` folder (and the example picture `docs/menu.png`), and give the path of each one.
 15. **Stop after the model setup.** Send the user `out/check.png` as an image (rule 16), give the main numbers of the calibration report in plain words, and list what you modelled and what you assumed. Ask the short question of Part B of the how-to (the full checklist only if the user is unsure), and **point out the parts you are least sure of** (for example a hidden end of an object, or a scale from an assumed dimension), so the user looks there first. Design lighting only after the user confirms the model: if the model is wrong, every light is wrong. This holds even when the user already described the lighting: do not send a draft before the confirmation, because a wrong first result costs more trust than a short wait. Say instead, in one line, that you will draw the described lighting as soon as they confirm the model, and keep their description for then.
@@ -62,6 +64,8 @@ Run all commands from the repository root (`python3 -m glowpoint.<tool>`). In a 
     5. Make one patch for each separate change when you can, so the maintainer can accept them one at a time. Never put the user's drawings or projects in a patch (the tool leaves out `local/` and drawings).
 
     For the maintainer, or an agent that can push: `python3 -m glowpoint.patch apply FILE.patch`, read the change, and run all tests. Then raise the version in `glowpoint/__init__.py` to the next number after the current one (not the number in the patch header, which is the version the session started from), add the changelog lines from the header under it, and commit and push (the pre-push hook runs the tests). Apply several patches one at a time, each with its own version, or together under one version.
+
+19. **Save the project for the user.** A chat sandbox deletes its files after some time, and then the model, the design, and any plugins are lost. Run `python3 -m glowpoint.project save local/<project>` and send the file to the user as a download, with one line ("Your project file, keep it to continue later in a new chat"), at these times: when the user confirms the model; when the user pauses or says they are done after design changes; before an updated zip; and when the user asks. Not after every render. The file contains their drawing, so it goes only to them.
 
 ## Menu for the user: lights, ceilings, and plugins
 
@@ -124,6 +128,8 @@ Keep your own messages short and plain. Do not show JSON, file names, commands, 
 > 3. Then describe the lighting in plain words, for example "wash the back wall and put pendants over the desk". I send the drawing with the lights.
 >
 > The picture shows the lights and ceilings that I can draw. Ask "what can you draw?" at any time for the list with options.
+>
+> This chat deletes its files after some time, so I give you a **project file** to keep at important steps. To continue later, start a new chat and upload the glowpoint zip and your latest project file.
 
 Send `docs/menu.png` as an image with Part A (it is the picture that Part A refers to).
 

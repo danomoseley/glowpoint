@@ -3,6 +3,9 @@
 Newest first. Each version says what a user or an agent will notice. The version is in
 `glowpoint/__init__.py`, and `python3 -m glowpoint.doctor` prints it.
 
+## 0.12.0 — 2026-11-12
+- `glowpoint.project save` / `restore`: one file with the whole project (drawing, model, design, plugins, fixtures, last images), so work survives the end of a chat session. Agents give it to the user at important steps (rule 19) and restore it in a new chat.
+
 ## 0.11.7 — 2026-11-12
 - `docs/menu.png`: one labelled example of each light and ceiling type (`docs/make_menu.py` rebuilds it); agents send it with the welcome and the menu.
 - Agents: the model check is one short question; the full checklist only when the user is unsure.

@@ -3,7 +3,7 @@
 # Turn it on once in each clone:  git config core.hooksPath .githooks
 cd "$(git rev-parse --show-toplevel)" || exit 1
 echo "pre-push: checking documentation and tests..."
-for t in tests/test_docs.py tests/test_render.py tests/test_calibrate.py tests/test_detect.py tests/test_patch.py; do
+for t in tests/test_docs.py tests/test_render.py tests/test_calibrate.py tests/test_detect.py tests/test_patch.py tests/test_project.py; do
     out=$(python3 -W ignore "$t" 2>&1); status=$?
     echo "$out" | grep -E "^(PASS|FAIL)|^      " 
     if [ $status -ne 0 ]; then

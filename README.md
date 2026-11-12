@@ -113,11 +113,13 @@ from glowpoint import calibrate, measure, zoom                  # each tool has 
 measure.main(["glowpoint-main/projects/lobby", "floor", "302", "444"])
 ```
 
+**Keep your work.** A chat sandbox deletes its files after some time. The assistant gives you a project file at important steps (`python3 -m glowpoint.project save <project>`): the drawing, model, design, plugins, fixture list, and the last images in one zip. To continue later, start a new chat, upload the glowpoint zip and the project file, and the assistant restores it (`python3 -m glowpoint.project restore <file>`). A restore never overwrites a project with the same name; it uses a new name (`lobby-2`).
+
 **Updating a session that already has glowpoint.** Download the new zip, upload it to the same conversation, and send this message with it. It works also when the old version in the session is older than these instructions:
 
 ```text
 Here is a newer version of glowpoint. Update without losing my work:
-1. First make a zip of everything in local/ in the current glowpoint folder (my projects: drawings, model.json, design.json, types/, fixtures.json) and give it to me to download as a backup. If the files from earlier in this conversation are gone, tell me, and do not continue.
+1. First make a zip of each project in local/ (with python3 -m glowpoint.project save local/<project> if this version has it, otherwise a zip of the project folder: drawing, model.json, design.json, types/, fixtures.json) and give it to me to download as a backup. If the files from earlier in this conversation are gone, tell me, and do not continue.
 2. Tell me if you changed any glowpoint files outside local/ earlier in this conversation. Do not copy them to the new version.
 3. Rename the old folder, unzip the new zip into a new folder, and run python3 -m glowpoint.doctor there.
 4. Read the new AGENTS.md completely and follow it from now on, starting at "When the user sends an updated zip", step 3.
