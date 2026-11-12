@@ -100,6 +100,27 @@ def fixture_sources(project, design=None):
     return src
 
 
+def _other_projects(project, have):
+    """Custom types in the other project folders next to this one (for example the other projects in local/)."""
+    out, here = [], os.path.abspath(project)
+    parent = os.path.dirname(here)
+    for d in sorted(glob.glob(os.path.join(parent, "*", "types"))):
+        proj = os.path.dirname(d)
+        if os.path.abspath(proj) == here: continue
+        for path in sorted(glob.glob(os.path.join(d, "*.py"))):
+            if os.path.basename(path).startswith("_"): continue
+            try:
+                spec = importlib.util.spec_from_file_location("glowpoint_peek_" + str(abs(hash(path))), path)
+                mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
+            except Exception:
+                continue
+            info = getattr(mod, "INFO", {})
+            for t in list(getattr(mod, "LIGHTS", {})) + list(getattr(mod, "GEOMETRY", {})):
+                i = info.get(t, {})
+                out.append((os.path.basename(proj), t, i.get("name", t), i.get("description", "(no description)")))
+    return out
+
+
 def catalog(project, only=None):
     """Lines that describe the custom types and fixtures a project can use (only: a source label to keep)."""
     import contextlib, io
@@ -115,6 +136,11 @@ def catalog(project, only=None):
         for i in sorted(types, key=lambda i: (i["source"], i["type"])):
             lines.append(f"  {i.get('name', i['type'])} [{i['type']}, {i['source']}]: {i.get('description', '(no description)')}"
                          + (f'. Ask: "{i["example"]}"' if i.get("example") else ""))
+    if not only:
+        other = _other_projects(project, set(INFO))
+        if other:
+            lines.append('In your other projects in this session (say "use the <name> from <project>" to copy one here):')
+            lines += [f"  {n} [{t}] in {proj}: {d}" for proj, t, n, d in other]
     fixtures = [k for k in fx if not only or fsrc.get(k) == only]
     if fixtures:
         lines.append("Fixtures (for the fixture type):")

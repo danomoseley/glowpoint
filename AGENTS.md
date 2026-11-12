@@ -70,7 +70,7 @@ Run all commands from the repository root (`python3 -m glowpoint.<tool>`). In a 
 20. **Plugins and fixtures that you make must be visible and portable.**
     1. Give every type that you make an `INFO` entry: a plain `name` in the user's words, a one-line `description`, and an `example` request (see `examples/types/linear_strip.py`). Give every fixture a `"description"`.
     2. **Tell the user when you make one,** in one line: "I made a new light type, *LED strip*. Ask for it by that name." Never make one silently.
-    3. When the user asks what you can draw, add the output of `python3 -m glowpoint.plugins list local/<project>` to the menu as "Your custom types and fixtures" (plain names and example requests).
+    3. When the user asks what you can draw, add the output of `python3 -m glowpoint.plugins list local/<project>` to the menu as "Your custom types and fixtures" (plain names and example requests). It also lists the types in the user's other projects in this session; the user copies one with a request like "use the LED strip from the Smith lobby".
     4. To reuse one from an earlier project: ask the user for that project's file, restore it (rule 19), copy the plugin file from its `types/` and the fixture entries from its `fixtures.json` into the current project, and tell the user.
     5. When a type or fixture will probably be useful again, ask: "Do you want *LED strip* in all future projects, and for your coworkers? I will make a file to send to the person who looks after glowpoint." If yes, copy it to `library/types/` (fixtures: `library/fixtures.json`), run the tests, and make a patch (rule 18). Until it is added, it stays in the project file.
     6. **A change to a library type or fixture changes every project that uses it, and that is intended:** a fix or an improvement reaches everybody with the next zip. Only a deliberately different design (not a fix) gets a new name, so that existing designs keep their intent.
@@ -108,7 +108,7 @@ Send the picture `docs/menu.png` (one labelled example of each type) with this l
 > - **a new kind of light**, for example an LED strip between two columns, a fixture family your office uses often, or a special symbol;
 > - **a new ceiling or architectural element** that changes the 3D model, for example a beam grid, a bulkhead, or a stepped soffit made of flat surfaces;
 > - **new placement words**, for example "between column A and column B" or "on every second window".
-> Custom types and fixtures that were made for earlier projects, or for the office, are in the list "Your custom types and fixtures" (from `plugins list`), with their names.
+> **Your custom types and fixtures** (made for this project, your other projects, or the office) are listed below with their names. To use one from another project, say for example "use the LED strip from the Smith lobby". If that project is from an earlier chat, upload its project file too.
 > A fixture from a spec sheet usually needs no plugin: I describe it with the fixture type, and I can save it in a fixture list for the project so you can reuse it by name.
 > A plugin cannot change how glowpoint reads the drawing or the camera, cannot make sloped or curved surfaces, and cannot calculate light levels. Those need a change to the glowpoint program itself. I tell you before I try one, and afterwards I give you a small file to send to the person who looks after glowpoint, so that everybody gets the change.
 

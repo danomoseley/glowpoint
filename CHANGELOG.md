@@ -3,6 +3,9 @@
 Newest first. Each version says what a user or an agent will notice. The version is in
 `glowpoint/__init__.py`, and `python3 -m glowpoint.doctor` prints it.
 
+## 0.13.2 — 2026-11-12
+- `plugins list` also shows the custom types in the user's other projects in the session, with how to ask for one ("use the LED strip from the Smith lobby"); the menu says so.
+
 ## 0.13.1 — 2026-11-12
 - Library changes reach every project (intended); a deliberately different design gets a new name. Custom types in the user's projects are copies: a change stays in the current project, and the agent asks before it changes the same type in another project.
 

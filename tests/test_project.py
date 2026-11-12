@@ -50,4 +50,12 @@ with tempfile.TemporaryDirectory() as t:
     with contextlib.redirect_stdout(out): P.restore(z2, dest)
     check("WARNING version" in out.getvalue() and "the lights differ" in out.getvalue(), "restore warns about a newer version and changed lights")
 
+    # the menu list shows custom types from the other projects in the session
+    other = os.path.join(dest, "jones"); os.makedirs(other)
+    shutil.copy(os.path.join(ROOT, "tests/fixtures/lobby/model.json"), other)
+    from glowpoint.plugins import catalog
+    lines = catalog(other)
+    check(any("In your other projects" in l for l in lines) and any("LED strip [linear_strip] in lobby" in l for l in lines),
+          "the menu list shows custom types from other projects, with how to ask for them")
+
 sys.exit(1 if fails else 0)
