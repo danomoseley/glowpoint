@@ -29,8 +29,9 @@ When a user gives you this repository (often only a zip, with no other instructi
 13. **After a code change, run the tests:** `python3 tests/test_docs.py`, `python3 tests/test_render.py`, `python3 tests/test_calibrate.py`, and `python3 tests/test_detect.py`.
 
 14. **Draw only with glowpoint.** Never edit or draw on the user's image yourself, and never make an image with an image-generation tool. Show the user only files that glowpoint wrote in the project's `out/` folder, and give the path of each one.
-15. **Stop after the model setup.** Show the user `out/check.png`, the calibration report, and a list of what you modelled and what you assumed. Design lighting only after the user confirms the model: if the model is wrong, every light is wrong.
-16. **Report the result** of every lighting change: show `out/concept.png` and a short list of the lights (type, count, spacing, heights) from `out/positions.csv`.
+15. **Stop after the model setup.** Send the user `out/check.png` as an image (rule 16), give the main numbers of the calibration report in plain words, and list what you modelled and what you assumed. Design lighting only after the user confirms the model: if the model is wrong, every light is wrong.
+16. **Send the image after every render.** After each render, put the image file itself into the conversation, so the user sees the picture: `out/concept.png` after a lighting change (or the `--out` name you used), `out/check.png` after a model setup. Display it or attach it as a file, with its path. A file name, a description, or a link to a folder is not enough. Then give a short plain-text list of the lights (type, count, spacing, heights) from `out/positions.csv`.
+    **Do not paste JSON** (design.json, model.json, positions.csv) as your answer. The user wants the picture. Show JSON only when the user asks for it.
 17. **Show the user the how-to** (the section "How-to for the user" below) at the start of a new conversation (see "Start of a conversation"), and again when the user seems unsure what to ask. Show it as it is written; you can shorten it if the user already knows glowpoint.
 
 Run all commands from the repository root (`python3 -m glowpoint.<tool>`). In a new environment, run `python3 -m glowpoint.doctor` first. If you cannot clone from GitHub (no internet), ask the user to upload the repository as a zip (GitHub: Code → Download ZIP).
@@ -66,7 +67,7 @@ Show this to the user (rule 17):
 >
 > **Other views and options:** ask for "a view from the doorway, looking at the desk" or "option B with all lights at 4000 K". I render it without changing the first design.
 >
-> **What I show you:** the image glowpoint made, and a list of the lights with their positions in feet. If I assume a size, I tell you.
+> **What I show you:** after every change, the image that glowpoint made, in this chat, and a short list of the lights with their positions in feet. If I assume a size, I tell you. If you want the design file (JSON) too, ask for it.
 >
 > **Limits:** no sloped or curved ceilings yet, no photo-realistic renders, and no footcandle calculations: the images show the lighting concept, not light levels.
 
@@ -127,6 +128,7 @@ Table lamps, floor lamps, candles: `glow` at the lamp shade (measure the shade w
 2. Add or edit features in `design.json`. The light types and expressions are in the README.
 3. `python3 -m glowpoint.render <project>` (add `--linework` if there is no drawing; `--camera view.json` for another view).
 4. Check `out/positions.csv` and `out/concept.png`. If the legend covers part of the drawing, set `"legend_at"` (for example `"below"`).
+5. Send `out/concept.png` to the user as an image, with a short list of the lights (rule 16). Not the JSON.
 
 ## Task: set up a new image
 
@@ -149,7 +151,7 @@ Table lamps, floor lamps, candles: `glow` at the lamp shade (measure the shade w
    Hidden parts: find the limits from the edge that hides them, choose a value inside (usually by symmetry), and write it in the box's `"note"`.
 4. **Check:** `python3 -m glowpoint.render <project> --check`, look at `out/check.png`, and zoom on the corners with `--model <project>` (red = model edges). Compare corners in numbers with `measure <project> project X Y Z`. Fix and repeat.
 5. **Coffers in the drawing:** if the ceiling shows coffers, run `python3 -m glowpoint.detect coffers <project> --depth FT --add` and check `out/detect_coffers.png` (see "Task: coffered ceilings").
-6. **Stop and show the user** `out/check.png`, the calibration report, and what you modelled and assumed (rule 15). Wait for confirmation.
+6. **Stop and send the user** `out/check.png` as an image, with the calibration result and what you modelled and assumed (rules 15 and 16). Wait for confirmation.
 
 ## Coordinates
 
