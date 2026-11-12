@@ -937,7 +937,7 @@ Inside a light function, the canvas gives you:
 
 **What a project can use:** `python3 -m glowpoint.plugins list <project>` lists the custom types (plain name, type, where it comes from, an example request) and the fixtures. `glowpoint.project restore` lists the project's own ones.
 
-**From one project to everybody.** A plugin or fixture starts in one project, and the project file carries it to the next session. To use it in another project, restore the old project file and copy the plugin file and the fixture entries. When it is useful again, add it to `library/` (from a chat sandbox: as a patch, see [Patches from sessions that cannot push](#patches-from-sessions-that-cannot-push)); then every user has it with the next zip. A type that is useful for everybody and that needs changes in the core can move into `glowpoint/features.py`.
+**From one project to everybody.** A plugin or fixture starts in one project, and the project file carries it to the next session. To use it in another project, restore the old project file and copy the plugin file and the fixture entries. When it is useful again, add it to `library/` (from a chat sandbox: as a patch, see [Patches from sessions that cannot push](#patches-from-sessions-that-cannot-push)); then every user has it with the next zip. A change to a library type changes every project that uses it, so keep changes compatible (new options with defaults that draw as before; a new name for a different look). To freeze a project, copy the library file into its `types/`. A type that is useful for everybody and that needs changes in the core can move into `glowpoint/features.py`.
 
 ## Working without merge conflicts
 

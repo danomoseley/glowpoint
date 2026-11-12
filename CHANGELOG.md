@@ -3,6 +3,9 @@
 Newest first. Each version says what a user or an agent will notice. The version is in
 `glowpoint/__init__.py`, and `python3 -m glowpoint.doctor` prints it.
 
+## 0.13.1 — 2026-11-12
+- Docs: library changes must keep the old result (new options with defaults, or a new name); a project freezes a library type by copying it into its `types/`.
+
 ## 0.13.0 — 2026-11-12
 - Plugins need `INFO` (plain name, description, example request); render warns without it. Fixtures take a `description`.
 - `library/`: the office library of types and fixtures, loaded in every project. Sessions add to it with a patch.
