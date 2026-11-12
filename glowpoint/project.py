@@ -121,6 +121,12 @@ def restore(path, dest=None, check=True):
            "unknown": f"version: unknown (saved with {saved_v}, this is {_version()}); check the render"}[st])
     if check:
         print("render check: " + compare_render(target))
+    try:
+        from glowpoint.plugins import catalog
+        lines = catalog(target, only="this project")
+        if lines: print("This project has its own types or fixtures (tell the user their names):\n" + "\n".join(lines))
+    except Exception as e:
+        print(f"note: could not list the project's types ({e})")
     return target
 
 

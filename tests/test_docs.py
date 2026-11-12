@@ -74,6 +74,17 @@ for name in types:
     if name not in tiles:
         problems.append(f"type {name} has no tile in docs/menu_tiles.json (then run python3 docs/make_menu.py)")
 
+# 3c. plugins in examples/ and library/ have INFO; library fixtures have a description
+import glob as _g, importlib.util as _iu
+for path in _g.glob(os.path.join(ROOT, "examples", "types", "*.py")) + _g.glob(os.path.join(ROOT, "library", "types", "*.py")):
+    spec = _iu.spec_from_file_location("p_" + os.path.basename(path)[:-3], path); mod = _iu.module_from_spec(spec); spec.loader.exec_module(mod)
+    for k in list(getattr(mod, "LIGHTS", {})) + list(getattr(mod, "GEOMETRY", {})):
+        if not all(getattr(mod, "INFO", {}).get(k, {}).get(x) for x in ("name", "description", "example")):
+            problems.append(f"{os.path.relpath(path, ROOT)}: type {k} needs INFO with name, description, example")
+for k, v in json.load(open(os.path.join(ROOT, "library", "fixtures.json"))).items():
+    if not k.startswith("_") and not v.get("description"):
+        problems.append(f"library/fixtures.json: {k} needs a description")
+
 # 4. tools
 tools = [os.path.splitext(f)[0] for f in os.listdir(os.path.join(ROOT, "glowpoint"))
          if f.endswith(".py") and "def main" in open(os.path.join(ROOT, "glowpoint", f)).read()] + ["render"]

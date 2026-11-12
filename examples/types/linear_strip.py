@@ -11,6 +11,10 @@ design.json:
 """
 import numpy as np
 
+INFO = {"linear_strip": {"name": "LED strip",
+                         "description": "a linear LED strip along a surface, between two points, with a soft glow",
+                         "example": "an LED strip under the desk top, from end to end"}}
+
 
 def linear_strip(cv, f):
     m = cv.m; s = m.surface(f["plane"]); i = cv.sid(f["plane"])

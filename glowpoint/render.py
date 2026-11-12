@@ -155,11 +155,7 @@ def render(project, check=False, out_name="concept.png", design_file="design.jso
             if f["type"] in geometry:
                 fe = evaluate(f, ns); fe["layer"] = L["name"]; geometry[f["type"]][0](m, fe); geo.append(fe)
     cv = F.Canvas(m, base); cv.raycast()
-    cv.fixtures = {}
-    fx_file = os.path.join(project, "fixtures.json")
-    if os.path.exists(fx_file): cv.fixtures.update(json.load(open(fx_file)))
-    cv.fixtures.update(design.get("fixtures", {}))
-    cv.fixtures = {k: v for k, v in cv.fixtures.items() if not k.startswith("_")}
+    cv.fixtures = plugins.load_fixtures(project, design)
     for fe in geo:
         F.set_color(fe.get("cct", design.get("cct")), fe.get("light_color"))
         base = geometry[fe["type"]][1](cv, fe, base)

@@ -31,6 +31,8 @@ with tempfile.TemporaryDirectory() as t:
     out = io.StringIO()
     with contextlib.redirect_stdout(out): b = P.restore(z, dest)
     check("same lights as when it was saved" in out.getvalue() and "version: same" in out.getvalue(), "restore reports the same version and the same lights")
+    check("LED strip [linear_strip, this project]" in out.getvalue() and "round-12in-downlight [this project]" in out.getvalue(),
+          "restore lists the project's own types and fixtures by name")
     check(os.path.basename(b) == "lobby-2" and os.path.exists(os.path.join(a, "model.json")), "a second restore does not overwrite the first")
     check(open(os.path.join(a, "out", "positions.csv")).read() == open(os.path.join(proj, "out", "positions.csv")).read(),
           "the restored project renders the same lights")

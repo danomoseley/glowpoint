@@ -3,6 +3,12 @@
 Newest first. Each version says what a user or an agent will notice. The version is in
 `glowpoint/__init__.py`, and `python3 -m glowpoint.doctor` prints it.
 
+## 0.13.0 — 2026-11-12
+- Plugins need `INFO` (plain name, description, example request); render warns without it. Fixtures take a `description`.
+- `library/`: the office library of types and fixtures, loaded in every project. Sessions add to it with a patch.
+- `python3 -m glowpoint.plugins list <project>`: the custom types and fixtures a project can use. `project restore` lists the project's own ones.
+- Agents: rule 20 (tell the user about new types, show them in the menu, reuse from an earlier project file, offer to add them to the library).
+
 ## 0.12.1 — 2026-11-12
 - `project restore`: checks the version that saved the project (warns when the project is from a newer glowpoint), renders it, and compares the lights with the saved light list.
 

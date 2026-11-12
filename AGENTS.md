@@ -33,7 +33,7 @@ If the new version stops with an error on the user's project, tell the user, con
 1. **Never estimate positions by eye.** Get pixel positions with `glowpoint.zoom`, and turn them into feet with `glowpoint.measure`.
 2. **Use relationships in design.json**, not numbers, for anything that depends on the architecture: `"spaced(box('Desk').z0, box('Desk').z1, 3)"`, not three numbers. Then the lights follow when the model is corrected.
 3. **Add an object to model.json before you refer to it.** A desk, bench, or stair is a box.
-4. **Geometry goes in model.json, lighting goes in design.json.** Do not change code in `glowpoint/` for one project. A new kind of light is a plugin in `<project>/types/` (copy `examples/types/linear_strip.py`).
+4. **Geometry goes in model.json, lighting goes in design.json.** Do not change code in `glowpoint/` for one project. A new kind of light is a plugin in `<project>/types/` (copy `examples/types/linear_strip.py`; see rule 20).
 5. **Verify every result:** read `out/positions.csv` and confirm the numbers the user asked for (counts, spacing, heights), and look at the output image.
 6. **When a light looks wrong, check the model first.** The usual cause is a surface or box that does not match the image. Run with `--check`.
 7. **State your assumptions.** If the request leaves out a size, choose a normal value and tell the user which one.
@@ -67,6 +67,13 @@ Run all commands from the repository root (`python3 -m glowpoint.<tool>`). In a 
 
 19. **Save the project for the user.** A chat sandbox deletes its files after some time, and then the model, the design, and any plugins are lost. Run `python3 -m glowpoint.project save local/<project>` and send the file to the user as a download, with one line ("Your project file, keep it to continue later in a new chat"), at these times: when the user confirms the model; when the user pauses or says they are done after design changes; before an updated zip; and when the user asks. Not after every render. The file contains their drawing, so it goes only to them.
 
+20. **Plugins and fixtures that you make must be visible and portable.**
+    1. Give every type that you make an `INFO` entry: a plain `name` in the user's words, a one-line `description`, and an `example` request (see `examples/types/linear_strip.py`). Give every fixture a `"description"`.
+    2. **Tell the user when you make one,** in one line: "I made a new light type, *LED strip*. Ask for it by that name." Never make one silently.
+    3. When the user asks what you can draw, add the output of `python3 -m glowpoint.plugins list local/<project>` to the menu as "Your custom types and fixtures" (plain names and example requests).
+    4. To reuse one from an earlier project: ask the user for that project's file, restore it (rule 19), copy the plugin file from its `types/` and the fixture entries from its `fixtures.json` into the current project, and tell the user.
+    5. When a type or fixture will probably be useful again, ask: "Do you want *LED strip* in all future projects, and for your coworkers? I will make a file to send to the person who looks after glowpoint." If yes, copy it to `library/types/` (fixtures: `library/fixtures.json`), run the tests, and make a patch (rule 18). Until it is added, it stays in the project file.
+
 ## Menu for the user: lights, ceilings, and plugins
 
 Send the picture `docs/menu.png` (one labelled example of each type) with this list. Show this list when the user asks what glowpoint can draw, what fixture types or options there are, or seems unsure what to ask for (rule 17). The names in brackets are the types in `design.json`; you can leave them out for the user. When the user asks about one type, give its options from that type's section in the README, in plain words, with the default values.
@@ -99,6 +106,7 @@ Send the picture `docs/menu.png` (one labelled example of each type) with this l
 > - **a new kind of light**, for example an LED strip between two columns, a fixture family your office uses often, or a special symbol;
 > - **a new ceiling or architectural element** that changes the 3D model, for example a beam grid, a bulkhead, or a stepped soffit made of flat surfaces;
 > - **new placement words**, for example "between column A and column B" or "on every second window".
+> Custom types and fixtures that were made for earlier projects, or for the office, are in the list "Your custom types and fixtures" (from `plugins list`), with their names.
 > A fixture from a spec sheet usually needs no plugin: I describe it with the fixture type, and I can save it in a fixture list for the project so you can reuse it by name.
 > A plugin cannot change how glowpoint reads the drawing or the camera, cannot make sloped or curved surfaces, and cannot calculate light levels. Those need a change to the glowpoint program itself. I tell you before I try one, and afterwards I give you a small file to send to the person who looks after glowpoint, so that everybody gets the change.
 

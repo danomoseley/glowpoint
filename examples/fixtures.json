@@ -1,6 +1,7 @@
 {
  "_note": "Example fixture list. Copy to <project>/fixtures.json, or put a \"fixtures\" block in design.json. Sizes in feet.",
  "round-12in-downlight": {
+  "description": "12 in round downlight: white trim, lit lens",
   "parts": [
    {"kind": "fill", "shape": "round", "d": 1.0, "color": "trim"},
    {"kind": "line", "shape": "round", "d": 1.0, "width": 0.03},
@@ -10,6 +11,7 @@
   "glow": {"r": 0.9, "strength": 0.55}
  },
  "square-2x2-troffer": {
+  "description": "2 x 2 ft troffer with a lit lens",
   "parts": [
    {"kind": "fill", "shape": "square", "w": 2.0, "color": "trim"},
    {"kind": "line", "shape": "square", "w": 2.0, "width": 0.03},
@@ -19,6 +21,7 @@
   "glow": {"r": 1.5, "strength": 0.5}
  },
  "linear-4ft-slot": {
+  "description": "4 ft linear slot",
   "parts": [
    {"kind": "fill", "shape": "rect", "w": 4.0, "l": 0.33, "color": "dark"},
    {"kind": "fill", "shape": "rect", "w": 3.9, "l": 0.2, "color": "lit"}
