@@ -125,6 +125,7 @@ Here is a newer version of glowpoint. Update without losing my work:
 4. Read the new AGENTS.md completely and follow it from now on, starting at "When the user sends an updated zip", step 3.
 5. If you changed glowpoint code in the old folder, make a file of those changes with the new version (from the new folder: python3 -c "from glowpoint.patch import make; make('OLD_FOLDER', 'changes from an older session', base='THE_OLD_ZIP')"), and give it to me.
 6. Render my current project with the new version, send me the image, and tell me what changed compared with the last image.
+7. Save my project with the new version (python3 -m glowpoint.project save local/<project>) and give me the project file to keep.
 ```
 
 If the backup in step 1 is all that is left (for example after the sandbox was reset), start a new conversation, upload the new zip and the backup zip, and ask the assistant to put the backup projects into `local/`.
