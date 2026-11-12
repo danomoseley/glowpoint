@@ -4,7 +4,7 @@ Newest first. Each version says what a user or an agent will notice. The version
 `glowpoint/__init__.py`, and `python3 -m glowpoint.doctor` prints it.
 
 ## 0.13.1 — 2026-11-12
-- Docs: library changes must keep the old result (new options with defaults, or a new name); a project freezes a library type by copying it into its `types/`.
+- Library changes reach every project (intended); a deliberately different design gets a new name. Custom types in the user's projects are copies: a change stays in the current project, and the agent asks before it changes the same type in another project.
 
 ## 0.13.0 — 2026-11-12
 - Plugins need `INFO` (plain name, description, example request); render warns without it. Fixtures take a `description`.
