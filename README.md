@@ -848,7 +848,7 @@ It finds square or round coffers on the ceiling and writes a `waffle` feature wi
 | `--depth FT` | Coffer depth. A line drawing seldom shows it clearly, so give the real one (default 6 in) |
 | `--add` | Add the feature to `design.json` |
 
-Notes: the camera and the ceiling must be set up first (the detection uses them). Only full coffers are reported. If the coffers continue past the edge of the image, the area is extended to the edge of the ceiling surface, in whole modules, and the note says so. On renders the module and area are usually within an inch; the rib width within about an inch.
+Notes: the camera and the ceiling must be set up first (the detection uses them). Running it again with `--add` replaces the earlier "Coffers (detected)" layer. If it finds nothing, it says what to check; see AGENTS.md, "Task: coffered ceilings", for the steps when the detection fails. Only full coffers are reported. If the coffers continue past the edge of the image, the area is extended to the edge of the ceiling surface, in whole modules, and the note says so. On renders the module and area are usually within an inch; the rib width within about an inch.
 
 `python3 tests/test_detect.py` tests the detection on drawings with known coffers (square and round, one-point and two-point).
 

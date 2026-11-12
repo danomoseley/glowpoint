@@ -9,7 +9,7 @@ the area. It writes out/detect_coffers.png: the detected coffer edges in red ove
   --plane   the surface the coffers are on (default Ceiling; it must be horizontal)
   --area    limit the search to this rectangle on the surface (ft). Default: the whole visible surface
   --depth   coffer depth, ft. A line drawing seldom shows it clearly, so the default is 6 in: set the real one
-  --add     add the feature to design.json as a new first layer "Coffers (detected)"
+  --add     add the feature to design.json as a new first layer "Coffers (detected)" (run again: it replaces that layer)
 
 The feature has "replace": true, so the render erases the drawn coffers in that area and draws its own
 (with the depth, shape and fixtures that you set). It has "lit": false.
@@ -364,7 +364,13 @@ def main(argv=None):
     a = ap.parse_args(argv)
     m = Model(a.project); img = cv2.imread(m.drawing)
     if img is None: raise SystemExit(f"cannot read {m.drawing}")
-    feat = detect_coffers(m, img, a.plane, a.area, a.depth)
+    try:
+        feat = detect_coffers(m, img, a.plane, a.area, a.depth)
+    except ValueError as e:
+        print(f"no coffers detected: {e}.\nNext: check that the {a.plane} surface in model.json matches the drawing "
+              f"(render --check); try --area on a clear part of the ceiling; or measure the module with zoom and "
+              f"measure and write the waffle feature yourself (AGENTS.md, Task: coffered ceilings).", file=sys.stderr)
+        return 1
     os.makedirs(os.path.join(a.project, "out"), exist_ok=True)
     ov = os.path.join(a.project, "out", "detect_coffers.png")
     pngmark.write(ov, overlay(m, img, feat))
@@ -374,9 +380,12 @@ def main(argv=None):
     if a.add:
         dp = os.path.join(a.project, "design.json")
         d = json.load(open(dp)) if os.path.exists(dp) else {"layers": []}
-        d["layers"].insert(0, {"name": "Coffers (detected)", "description": "coffers from the drawing", "features": [feat]})
+        layer = {"name": "Coffers (detected)", "description": "coffers from the drawing", "features": [feat]}
+        old = [i for i, l in enumerate(d.get("layers", [])) if l.get("name") == "Coffers (detected)"]
+        if old: d["layers"][old[0]] = layer
+        else: d.setdefault("layers", []).insert(0, layer)
         json.dump(d, open(dp, "w"), indent=1)
-        print(f"added to {dp}", file=sys.stderr)
+        print(f"{'replaced the earlier detected layer in' if old else 'added to'} {dp}", file=sys.stderr)
     return 0
 
 

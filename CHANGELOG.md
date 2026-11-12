@@ -3,6 +3,10 @@
 Newest first. Each version says what a user or an agent will notice. The version is in
 `glowpoint/__init__.py`, and `python3 -m glowpoint.doctor` prints it.
 
+## 0.11.2 — 2026-11-12
+- `detect coffers`: when it finds nothing, it says what to check instead of a Python error; `--add` again replaces the earlier detected layer.
+- Agents: when to use the coffer detector, and the steps when it fails.
+
 ## 0.11.1 — 2026-11-12
 - `glowpoint.patch make`: patches never change the version number or CHANGELOG.md; the changelog line goes in the header (`--changelog`), and the maintainer sets the version when the patch goes in. `apply` prints these steps.
 

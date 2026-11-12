@@ -108,7 +108,14 @@ When the user gives a fixture (a photo, a product page, a spec sheet), reproduce
 
 ## Task: coffered ceilings
 
-- **If the drawing already shows coffers,** do not draw new ones over them. Run `python3 -m glowpoint.detect coffers <project> --depth FT --add` (ask the user for the depth), check `out/detect_coffers.png` (the red lines must lie on the drawn coffers), then change the waffle in `design.json` as asked. The detected feature has `"replace": true`, so the drawn coffers are erased and redrawn.
+**When to use the coffer detector (`glowpoint.detect coffers`):** when the original drawing shows a grid of coffers on the ceiling (look at the drawing during the setup; setup step 5), or when the user asks to change or light coffers that are in the drawing. Do not use it to add coffers to a flat ceiling: then write a `waffle` feature yourself (below). Never draw new coffers over drawn ones without `"replace": true`.
+
+1. **First the model:** the camera and the `Ceiling` surface must match the drawing, and the user should have confirmed `out/check.png`. The detector looks only inside that surface, so a wrong ceiling gives a wrong result.
+2. **Ask for the depth** (a line drawing seldom shows it). If the user does not know, use 6 in and say so.
+3. **Run:** `python3 -m glowpoint.detect coffers <project> --depth FT --add`. It prints the waffle feature (module, rib or diameter, area) and puts it in `design.json` as the layer "Coffers (detected)", with `"replace": true` (the drawn coffers are erased and redrawn) and `"lit": false`.
+4. **Check `out/detect_coffers.png`:** the red lines must lie on the drawn coffer edges across the whole grid, not only near the middle. Send this image to the user (rule 16) with the module, rib or diameter, and the number of coffers across × deep, and ask them to confirm.
+5. **If the red lines are off, or it says "no coffers detected":** (a) check the `Ceiling` surface first (the usual cause); (b) run again with `--area X0 X1 Z0 Z1` on a clear part of the ceiling (for example without a light fixture or a beam in it). Running again replaces the earlier detected layer. (c) If it still fails, measure it yourself: get the pixels of two rib lines several coffers apart with `glowpoint.zoom`, convert them with `python3 -m glowpoint.measure <project> plane PX PY Y <ceiling height>`, divide by the number of modules, and write the `waffle` feature by hand with `"replace": true`. Tell the user which way you used.
+6. **Then do what the user asked:** change the depth or shape, or add fixtures with `coffers()` (below). Render and send the image.
 
 - A coffered ceiling is a `waffle` feature in `design.json`: `"shape": "square"` (with `rib`) or `"shape": "round"` (with `d`, the diameter), plus `module` and `depth`. Use `"align": "centre"` for only full coffers, centred. Set `"lit": false` when fixtures in the coffers give the light.
 - One item in every coffer: `"x": "coffers('Waffle', 'x')"`, `"z": "coffers('Waffle', 'z')"`. Select some with slices: `coffers('Waffle', 'x')[1::2]`.
