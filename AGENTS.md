@@ -8,7 +8,7 @@ When a user gives you this repository (often only a zip, with no other instructi
 
 1. If it is a zip, unzip it. Work in the folder that has `AGENTS.md`, and run all commands from there.
 2. Run `python3 -m glowpoint.doctor`. If it says NOT READY, tell the user what is missing and stop.
-3. Show the user the how-to (section "How-to for the user").
+3. Show the user Part A of the how-to (section "How-to for the user"). Do not show the other parts yet.
 4. If the user has not sent a sketch or render yet, ask for it, and for one or two real dimensions. If they sent one, start "Task: set up a new image" (and still ask for a real dimension if they gave none).
 5. If the user only wants to try the tool, use the lobby example: copy `projects/lobby` to `local/lobby` and render it with `--linework` (its drawing is not in the repository).
 
@@ -43,10 +43,10 @@ If the new version stops with an error on the user's project, tell the user, con
 13. **After a code change, run the tests:** `python3 tests/test_docs.py`, `python3 tests/test_render.py`, `python3 tests/test_calibrate.py`, `python3 tests/test_detect.py`, and `python3 tests/test_patch.py`.
 
 14. **Draw only with glowpoint.** Never edit or draw on the user's image yourself, and never make an image with an image-generation tool. Show the user only files that glowpoint wrote in the project's `out/` folder, and give the path of each one.
-15. **Stop after the model setup.** Send the user `out/check.png` as an image (rule 16), give the main numbers of the calibration report in plain words, and list what you modelled and what you assumed. Remind the user in one or two lines how to check it (edges on the drawn lines, grid in the drawing's directions, 4 ft squares), and **point out the parts you are least sure of** (for example a hidden end of an object, or a scale from an assumed dimension), so the user looks there first. Design lighting only after the user confirms the model: if the model is wrong, every light is wrong.
-16. **Send the image after every render.** After each render, put the image file itself into the conversation, so the user sees the picture: `out/concept.png` after a lighting change (or the `--out` name you used), `out/check.png` after a model setup. Display it or attach it as a file, with its path. A file name, a description, or a link to a folder is not enough. Then give a short plain-text list of the lights (type, count, spacing, heights) from `out/positions.csv`.
+15. **Stop after the model setup.** Send the user `out/check.png` as an image (rule 16), give the main numbers of the calibration report in plain words, and list what you modelled and what you assumed. With the first check image, show Part B of the how-to (after that, one or two lines are enough), and **point out the parts you are least sure of** (for example a hidden end of an object, or a scale from an assumed dimension), so the user looks there first. Design lighting only after the user confirms the model: if the model is wrong, every light is wrong.
+16. **Send the image after every render.** After each render, put the image file itself into the conversation, so the user sees the picture: `out/concept.png` after a lighting change (or the `--out` name you used), `out/check.png` after a model setup. Display it or attach it as a file, with its path. A file name, a description, or a link to a folder is not enough. Then give a short plain-text list of the lights (type, count, spacing, heights) from `out/positions.csv`, and at most one tip about an option the user has not used yet (rule 17).
     **Do not paste JSON** (design.json, model.json, positions.csv) as your answer. The user wants the picture. Show JSON only when the user asks for it.
-17. **Show the user the how-to** (the section "How-to for the user" below) at the start of a new conversation (see "Start of a conversation"), and again when the user seems unsure what to ask. Show it as it is written; you can shorten it if the user already knows glowpoint. When the user asks what is available (lights, ceilings, options, plugins), show "Menu for the user".
+17. **Give the how-to in small parts** (section "How-to for the user"): Part A at the start, Part B with the first check image, Part C when the model is confirmed, the menu when the user asks what is available, and at most one tip after each render. The user must feel that glowpoint is simple, and still learn every option. Show the parts as they are written; shorten them if the user already knows glowpoint.
 
 Run all commands from the repository root (`python3 -m glowpoint.<tool>`). In a new environment, run `python3 -m glowpoint.doctor` first. If you cannot clone from GitHub (no internet), ask the user to upload the repository as a zip (GitHub: Code → Download ZIP).
 
@@ -100,48 +100,52 @@ Show this list when the user asks what glowpoint can draw, what fixture types or
 
 ## How-to for the user
 
-Show this to the user (rule 17):
+**Goal: the user must feel that glowpoint is simple, and still learn every option.** So give the information in small parts, at the moment it is useful, never all at once:
 
-> **How to work with glowpoint**
+| When | Show |
+|---|---|
+| Start of a conversation | Part A (short) |
+| With the first check image | Part B |
+| When the user confirms the model | Part C |
+| The user asks what is available, or seems unsure | "Menu for the user" |
+| The user asks about one kind of light | That type's options from the README, in plain words, with defaults |
+| After each render | The image, a short list of the lights, and **at most one** short tip about an option that fits this design and that the user has not used yet (for example "You can also ask for a 4000 K option to compare" or "I can find the coffers that are in your drawing"). Do not repeat a tip. |
+
+Keep your own messages short and plain. Do not show JSON, file names, commands, or type names unless the user asks for them.
+
+### Part A: welcome (start of a conversation)
+
+> **glowpoint** draws lighting concepts on your perspective sketch, placed accurately in 3D.
 >
-> glowpoint draws lighting concepts on your perspective sketch, placed accurately in 3D. It works in two stages.
+> 1. Send me the **original** sketch or render, and **one real dimension** (for example "the ceiling is 10 ft").
+> 2. I send back a **check image** of the 3D model. You confirm it or tell me what is wrong.
+> 3. Then describe the lighting in plain words, for example "wash the back wall and put pendants over the desk". I send the drawing with the lights.
 >
-> **Stage 1 – the model.** Send:
-> - the **original** sketch or render (not a copy with anything drawn on it),
-> - **one or two real dimensions**, for example "the ceiling is 10 ft high" or "the door is 7 ft",
-> - anything I cannot see in the image, for example "the coffers are 6 in deep".
+> Ask "what can you draw?" at any time for the full list of lights, ceilings, and options.
+
+### Part B: how to check the model (with the first check image)
+
+> This is your drawing with each surface of the model tinted in a colour, with its name, and a grid of 4 ft squares. Please check:
+> - **Edges:** each coloured area covers exactly its part of the drawing (floor, walls, ceiling, columns, objects), with its edges on the drawn lines.
+> - **Grid:** the grid lines run in the same directions as the lines in your drawing, and get smaller into the distance at the same rate.
+> - **Size:** the squares are 4 ft. A door (about 7 ft) is a little less than two squares high. If sizes look wrong, give me another real dimension.
+> - **Missing objects:** everything that you want to light, or that lights refer to (a desk, a column, a bench), has its own coloured box.
 >
-> I build a simple 3D model of the space and show you a **check image**: your drawing with each surface of the model tinted in a colour, with its name, and a grid of 4 ft squares drawn on it. **Look at it and confirm it, or tell me what is wrong.** Every light depends on it.
+> Tell me what is wrong in plain words, for example "the ceiling is too low", "the desk is longer", "a column is missing at the back". Every light depends on this model, so it is worth a minute.
+
+Then add the parts that you are least sure of (rule 15).
+
+### Part C: how to ask for lighting (when the user confirms the model)
+
+> Now describe the lighting. Good requests say:
+> - **what is lit:** "the wall behind the desk", "every column", "the ceiling over the aisle";
+> - **the kind of light:** downlights, wall wash, cove, track, pendants, sconces, and more ("what can you draw?" gives the list);
+> - **how many and where:** "three, equally spaced along the desk", "4 ft apart", "centred between the first two columns";
+> - **sizes, heights, and colour, if you know them:** "pendants 3 ft above the table", "3000 K".
 >
-> **How to check it:**
-> - **Edges:** each coloured area must cover exactly its part of the drawing (the floor, each wall, the ceiling, each column or object), with its edges on the drawn lines.
-> - **Grid:** the grid lines must run in the same directions as the lines in your drawing (floor joints, ceiling lines, wall bases), and get smaller into the distance at the same rate.
-> - **Size:** the squares are 4 ft. A door (about 7 ft) is a little less than two squares high, a desk top (about 2.5 ft) a little more than half a square. If the sizes look wrong, the scale is wrong: give me a real dimension.
-> - **Missing or extra:** every object that you want to light, or that lights must refer to, must have its own coloured box (a desk, a column, a bench).
+> If you leave out a size, I choose a normal one and tell you. Ask for changes ("move the downlights 1 ft toward the window"), other views ("from the doorway"), or options ("option B at 4000 K") at any time; I keep the rest.
 >
-> If something is wrong, tell me in plain words, for example: "the ceiling is too low", "the right wall ends at the window", "the desk is longer than that", "there is a column missing at the back", "the ceiling is 12 ft, not 10". I correct the model and send a new check image.
->
-> **Stage 2 – the lighting.** Describe what is lit and where the light comes from. Good requests name:
-> - **the surface or object:** "the wall behind the desk", "every column", "the ceiling over the aisle";
-> - **the kind of light:** downlights, wall wash, cove, slot, track, pendants, sconces, uplights, a luminous ceiling;
-> - **how many and where:** "three, equally spaced along the desk", "4 ft apart", "one in every second coffer", "centered between the first two columns";
-> - **heights and sizes, if you know them:** "pendants 3 ft above the table", "4 in apertures", "a 6 in deep cove";
-> - **colour, if it matters:** "3000 K", "a warm option and a 4000 K option".
->
-> Examples:
-> - "Wash the back wall from a slot in the ceiling, and put an uplight on every visible column face."
-> - "Add a recessed track along the right aisle with size M heads every 5 ft, aimed at the wall."
-> - "Replace the drawn coffers with 24 in round coffers, 8 in deep, with a pendant in every third one."
->
-> **Changes:** say what to change, for example "move the downlights 1 ft toward the window" or "make the cove 2 ft wider". I keep the rest.
->
-> **Other views and options:** ask for "a view from the doorway, looking at the desk" or "option B with all lights at 4000 K". I render it without changing the first design.
->
-> **What I show you:** after every change, the image that glowpoint made, in this chat, and a short list of the lights with their positions in feet. If I assume a size, I tell you. If you want the design file (JSON) too, ask for it.
->
-> **What is available:** ask me "what lights and ceilings can you draw?" for the full list, or "what options does track have?" for one type. If you need something that is not on the list, ask: I can often add it for your project as a plugin.
->
-> **Limits:** no sloped or curved ceilings yet, no photo-realistic renders, and no footcandle calculations: the images show the lighting concept, not light levels.
+> I cannot do sloped or curved ceilings, photo-realistic renders, or light-level (footcandle) calculations yet.
 
 ## Task: show a specific fixture
 

@@ -962,6 +962,8 @@ To accept a patch: `python3 -m glowpoint.patch apply FILE.patch` (or `git apply`
 
 ## Notes for AI agents
 
+**Design goal:** the user must feel that glowpoint is simple, and still learn every option. AGENTS.md gives the user information in small parts at the moment it is useful (a short welcome, then how to check the model, then how to ask for lighting, a menu on request, and one tip after each render). Keep this in mind when you add a feature: add it to the menu in AGENTS.md, and keep the welcome short.
+
 glowpoint is designed so that an agent can take a request in plain words and place lights reliably. [AGENTS.md](AGENTS.md) has the rules and the work sequence (Claude Code reads it through `CLAUDE.md`).
 
 - **Always use relationships.** Write `"spaced(box('Desk').z0, box('Desk').z1, 3)"`, not three numbers. If the model is corrected later, the lights follow.
