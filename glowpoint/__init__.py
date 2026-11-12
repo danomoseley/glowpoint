@@ -1,2 +1,2 @@
 """glowpoint: lighting concepts on perspective drawings."""
-__version__ = "0.13.2"
+__version__ = "0.13.3"

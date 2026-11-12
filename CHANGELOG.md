@@ -3,6 +3,9 @@
 Newest first. Each version says what a user or an agent will notice. The version is in
 `glowpoint/__init__.py`, and `python3 -m glowpoint.doctor` prints it.
 
+## 0.13.3 — 2026-11-12
+- AGENTS.md reorganized: everyday rules first (12 rules), rare situations (restore, updated zip, program changes, shared types, push) in a last section that agents read only when needed. The rules are the same; the everyday part is about 30 % shorter.
+
 ## 0.13.2 — 2026-11-12
 - `plugins list` also shows the custom types in the user's other projects in the session, with how to ask for one ("use the LED strip from the Smith lobby"); the menu says so.
 

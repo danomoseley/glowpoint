@@ -8,7 +8,7 @@ Light types and fixtures here are available in **every project, for every user**
 - `fixtures.json`: specific fixtures for the `fixture` type. Give each one a `description`.
 
 How things get here: a session makes a plugin or a fixture for one project. When it is useful again, the
-agent asks the user, and makes a patch that adds it here (AGENTS.md, rule 20). The maintainer adds the
+agent asks the user, and makes a patch that adds it here (AGENTS.md, "Custom types"). The maintainer adds the
 patch, and everybody gets it with the next zip.
 
 **Changes affect every project, and that is intended.** A project uses the library version at each render,

@@ -64,7 +64,7 @@ for k in plain:
         problems.append(f"plain-text key `{k}` is not in AGENTS.md")
 
 # 3b. the user menu in AGENTS.md names every type
-menu = AGENTS[AGENTS.find("## Menu for the user"):AGENTS.find("## How-to for the user")]
+_m = AGENTS.find("Menu for the user"); menu = AGENTS[_m:AGENTS.find("\n## ", _m)]
 for name in types:
     if f"(`{name}`)" not in menu:
         problems.append(f"type {name} is not in the user menu in AGENTS.md")
