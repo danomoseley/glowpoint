@@ -3,6 +3,9 @@
 Newest first. Each version says what a user or an agent will notice. The version is in
 `glowpoint/__init__.py`, and `python3 -m glowpoint.doctor` prints it.
 
+## 0.12.1 — 2026-11-12
+- `project restore`: checks the version that saved the project (warns when the project is from a newer glowpoint), renders it, and compares the lights with the saved light list.
+
 ## 0.12.0 — 2026-11-12
 - `glowpoint.project save` / `restore`: one file with the whole project (drawing, model, design, plugins, fixtures, last images), so work survives the end of a chat session. Agents give it to the user at important steps (rule 19) and restore it in a new chat.
 

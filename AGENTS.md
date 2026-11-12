@@ -10,7 +10,7 @@ When a user gives you this repository (often only a zip, with no other instructi
 2. Run `python3 -m glowpoint.doctor`. If it says NOT READY, tell the user what is missing and stop.
 3. Show the user Part A of the how-to (section "How-to for the user"). Do not show the other parts yet.
 4. If the user has not sent a sketch or render yet, ask for it, and for one or two real dimensions. If they sent one, start "Task: set up a new image" (and still ask for a real dimension if they gave none).
-5. If the user also uploads a **project file** (a zip with `glowpoint-project.json` in it, or a zip of a project folder), restore it with `python3 -m glowpoint.project restore <file>`, render it, send the image, and continue that project.
+5. If the user also uploads a **project file** (a zip with `glowpoint-project.json` in it, or a zip of a project folder), restore it with `python3 -m glowpoint.project restore <file>`. It checks the version and renders the project, then compares the lights with the list saved in the file. Act on what it prints: "WARNING version" means the project is from a newer glowpoint, so ask the user for the newest glowpoint zip before you continue; "the lights differ" means this version draws the project differently, so tell the user what changed; "does not render" means the project needs something this version does not have (often a change from an older session that is not on GitHub yet): tell the user in plain words, and send the error to the maintainer through the user. Then send the image and continue that project.
 6. If the user only wants to try the tool, use the lobby example: copy `projects/lobby` to `local/lobby` and render it with `--linework` (its drawing is not in the repository).
 
 ## When the user sends an updated zip

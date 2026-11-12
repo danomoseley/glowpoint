@@ -113,7 +113,7 @@ from glowpoint import calibrate, measure, zoom                  # each tool has 
 measure.main(["glowpoint-main/projects/lobby", "floor", "302", "444"])
 ```
 
-**Keep your work.** A chat sandbox deletes its files after some time. The assistant gives you a project file at important steps (`python3 -m glowpoint.project save <project>`): the drawing, model, design, plugins, fixture list, and the last images in one zip. To continue later, start a new chat, upload the glowpoint zip and the project file, and the assistant restores it (`python3 -m glowpoint.project restore <file>`). A restore never overwrites a project with the same name; it uses a new name (`lobby-2`).
+**Keep your work.** A chat sandbox deletes its files after some time. The assistant gives you a project file at important steps (`python3 -m glowpoint.project save <project>`): the drawing, model, design, plugins, fixture list, and the last images in one zip. To continue later, start a new chat, upload the glowpoint zip and the project file, and the assistant restores it (`python3 -m glowpoint.project restore <file>`). A restore never overwrites a project with the same name; it uses a new name (`lobby-2`). A restore also checks the version: the file records the glowpoint version that saved it. A project from an older version is usually fine; a project from a newer version prints a warning (use the newest glowpoint zip). Then it renders the project and compares the lights with the light list saved in the file, and says if they differ.
 
 **Updating a session that already has glowpoint.** Download the new zip, upload it to the same conversation, and send this message with it. It works also when the old version in the session is older than these instructions:
 

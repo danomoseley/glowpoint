@@ -25,12 +25,27 @@ with tempfile.TemporaryDirectory() as t:
     a = P.restore(z, dest)
     want = ["model.json", "design.json", "fixtures.json", "types/linear_strip.py", "out/concept.png"]
     check(all(os.path.exists(os.path.join(a, w)) for w in want), "restore has the model, design, fixtures, plugin and last image")
-    check(not os.path.exists(os.path.join(a, "out", "positions.csv")) and not os.path.exists(os.path.join(a, "glowpoint-project.json")),
-          "only images from out/, and no manifest in the project")
-    b = P.restore(z, dest)
+    check(os.path.exists(os.path.join(a, "out", "positions_saved.csv")) and not os.path.exists(os.path.join(a, "glowpoint-project.json")),
+          "the saved light list is kept, and no manifest in the project")
+    import io, contextlib, json, zipfile
+    out = io.StringIO()
+    with contextlib.redirect_stdout(out): b = P.restore(z, dest)
+    check("same lights as when it was saved" in out.getvalue() and "version: same" in out.getvalue(), "restore reports the same version and the same lights")
     check(os.path.basename(b) == "lobby-2" and os.path.exists(os.path.join(a, "model.json")), "a second restore does not overwrite the first")
-    render(a, linework=True)
     check(open(os.path.join(a, "out", "positions.csv")).read() == open(os.path.join(proj, "out", "positions.csv")).read(),
           "the restored project renders the same lights")
+    check([P.version_status(v) for v in ("0.0.1", "99.0.0", P._version(), "x")] == ["older", "newer", "same", "unknown"], "version status")
+    # a saved light list that differs (as from another version) is reported
+    z2 = os.path.join(t, "changed.zip")
+    with zipfile.ZipFile(z, "r") as zi, zipfile.ZipFile(z2, "w") as zo:
+        for n in zi.namelist():
+            data = zi.read(n)
+            if n.endswith("out/positions.csv"): data = b"\n".join(data.split(b"\n")[:-3]) + b"\n"
+            if n.endswith("glowpoint-project.json"):
+                info = json.loads(data); info["glowpoint"] = "99.0.0"; data = json.dumps(info).encode()
+            zo.writestr(n, data)
+    out = io.StringIO()
+    with contextlib.redirect_stdout(out): P.restore(z2, dest)
+    check("WARNING version" in out.getvalue() and "the lights differ" in out.getvalue(), "restore warns about a newer version and changed lights")
 
 sys.exit(1 if fails else 0)
