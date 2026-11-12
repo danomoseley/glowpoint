@@ -1,5 +1,7 @@
 # glowpoint
 
+> **AI assistants:** if a user gave you this repository (a clone or a zip), read [AGENTS.md](AGENTS.md) now and follow it. It tells you how to start, what to ask the user, and how to work. The user does not need to give you any other instructions.
+
 Put lighting concepts on an architect's perspective drawing, placed accurately in 3D.
 
 You start with a perspective image of a space: a render from 3D software or a hand sketch, in one-, two- or three-point perspective. glowpoint builds a simple 3D model behind the drawing (the camera, the floor, the walls, the ceiling, the columns). Then you describe the lighting in a design file, for example "three downlights equally spaced above the desk" or "an uplight on every visible column face". glowpoint calculates the exact positions and draws the light on the original drawing, in the correct perspective.

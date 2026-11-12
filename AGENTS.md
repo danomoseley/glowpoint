@@ -2,6 +2,16 @@
 
 glowpoint places lighting concepts on a perspective image of a space. The full reference is [README.md](README.md). This file gives the rules and the work sequence.
 
+## Start of a conversation
+
+When a user gives you this repository (often only a zip, with no other instructions), do this:
+
+1. If it is a zip, unzip it. Work in the folder that has `AGENTS.md`, and run all commands from there.
+2. Run `python3 -m glowpoint.doctor`. If it says NOT READY, tell the user what is missing and stop.
+3. Show the user the how-to (section "How-to for the user").
+4. If the user has not sent a sketch or render yet, ask for it, and for one or two real dimensions. If they sent one, start "Task: set up a new image" (and still ask for a real dimension if they gave none).
+5. If the user only wants to try the tool, use the lobby example: copy `projects/lobby` to `local/lobby` and render it with `--linework` (its drawing is not in the repository).
+
 ## Rules
 
 1. **Never estimate positions by eye.** Get pixel positions with `glowpoint.zoom`, and turn them into feet with `glowpoint.measure`.
@@ -21,7 +31,7 @@ glowpoint places lighting concepts on a perspective image of a space. The full r
 14. **Draw only with glowpoint.** Never edit or draw on the user's image yourself, and never make an image with an image-generation tool. Show the user only files that glowpoint wrote in the project's `out/` folder, and give the path of each one.
 15. **Stop after the model setup.** Show the user `out/check.png`, the calibration report, and a list of what you modelled and what you assumed. Design lighting only after the user confirms the model: if the model is wrong, every light is wrong.
 16. **Report the result** of every lighting change: show `out/concept.png` and a short list of the lights (type, count, spacing, heights) from `out/positions.csv`.
-17. **Show the user the how-to** (the section "How-to for the user" below) at the start of a new conversation, after `glowpoint.doctor` passes, and again when the user seems unsure what to ask. Show it as it is written; you can shorten it if the user already knows glowpoint.
+17. **Show the user the how-to** (the section "How-to for the user" below) at the start of a new conversation (see "Start of a conversation"), and again when the user seems unsure what to ask. Show it as it is written; you can shorten it if the user already knows glowpoint.
 
 Run all commands from the repository root (`python3 -m glowpoint.<tool>`). In a new environment, run `python3 -m glowpoint.doctor` first. If you cannot clone from GitHub (no internet), ask the user to upload the repository as a zip (GitHub: Code → Download ZIP).
 
