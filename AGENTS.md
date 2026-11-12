@@ -106,6 +106,8 @@ Send the picture `docs/menu.png` (one labelled example of each type) with this l
 > - Light wells and skylights: round or rectangular, with a glowing top and light on their walls (`lightwell`)
 > - Luminous ceilings or walls: a glowing area, with panel joints or bands (`luminous`)
 >
+> **Plans:** a reflected ceiling plan and a floor plan of the same design, to scale, with a symbol and a legend for every light.
+>
 > **For every light:** colour temperature (for example 2700 K, 3000 K, 4000 K; diagrammatic colours, good for warm and cool options), counts and spacing tied to the architecture ("centred on the desk", "every 4 ft", "in every second coffer"), other views of the same design, design options side by side, and a legend.
 >
 > **Plugins: things you can add.** If you need something that is not on this list, I can write a plugin, a small file in your project, without changing glowpoint:
@@ -183,6 +185,10 @@ Table lamps, floor lamps, candles: `glow` at the lamp shade (measure the shade w
 3. `python3 -m glowpoint.render <project>` (add `--linework` if there is no drawing; `--camera view.json` for another view).
 4. Check `out/positions.csv` and `out/concept.png`. If the legend covers part of the drawing, set `"legend_at"` (for example `"below"`).
 5. Send `out/concept.png` to the user as an image, with a short list of the lights (rule 6). Not the JSON.
+
+### Task: plans
+
+When the user asks for a plan, a reflected ceiling plan (RCP), or a floor plan: `python3 -m glowpoint.plan local/<project> --rcp` (reflected ceiling plan, `out/rcp.png`) or without `--rcp` (floor plan, `out/plan.png`); `--all` puts every light in one plan. Send the image (rule 6). The plan comes from the same model and design, so after a design change, make the plan again if the user wants it current.
 
 ### Task: set up a new image
 

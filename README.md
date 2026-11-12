@@ -745,6 +745,25 @@ Expressions run in a restricted Python evaluator with only these names (and Pyth
 
 `visible_faces()` always means visible in the drawing's own camera, also when you render another view. Thus a design is the same in all views.
 
+### Plans: reflected ceiling plan and floor plan
+
+```bash
+python3 -m glowpoint.plan projects/lobby --rcp      # reflected ceiling plan: out/rcp.png
+python3 -m glowpoint.plan projects/lobby            # floor plan: out/plan.png
+```
+
+![Reflected ceiling plan of the lobby test design](docs/plan-rcp.png)
+
+The plan is drawn straight down, to scale, from the same model and design as the perspective, so it always agrees with it. X is to the right and Z (away from the drawing's viewer) is up the page; the reflected ceiling plan has the same orientation as the floor plan. It shows the walls, the columns (solid), the furniture (dashed in the reflected ceiling plan), the ceiling areas with their heights, steps in the ceiling, and a marker for the drawing's viewer and the direction they look.
+
+| Option | Use |
+|---|---|
+| `--rcp` | Reflected ceiling plan: lights at 7 ft and above, and the ceiling elements (coffers, coves, slats, light wells, luminous areas). Without it: floor plan, lights below 7 ft |
+| `--all` | Every light, in either plan |
+| `--design FILE`, `--out NAME.png`, `--title TEXT` | Another design file, output name, or title |
+
+Each layer gets its own colour and a line in the legend with its count. Symbols: downlight and fixture (circle with a dot), pendant (circle with a cross), track head (small square, on its track line), wallwasher (double circle), uplight (half-filled circle), sconce (filled circle with a ring), lamp glow (dashed circle), linear pendant (its length to scale), slots and washes (lines; a wash has arrows toward its wall), luminous areas (tinted). The plan's light list is in `out/positions_rcp.csv` or `out/positions_plan.csv`.
+
 ## Setting up a new drawing
 
 ### 1. Find the camera

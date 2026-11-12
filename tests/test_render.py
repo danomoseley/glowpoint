@@ -213,6 +213,20 @@ def main(update=False):
     print(f"{'PASS' if good else 'FAIL'}  colour, wallwashers, stitch track, object light, projections: "
           f"{c['wallwasher']} wallwashers, {c['track']} stitch runs, {c['projection']} projections; colour reset after render: {FF.GLOW == FF.cct_bgr(2700)}")
     ok &= good
+
+    # 12. plans: reflected ceiling plan and floor plan of the lobby fixture design
+    from glowpoint.plan import plan
+    import csv as _csv, cv2 as _cv2
+    rcp = plan(proj, rcp=True); fp = plan(proj)
+    nr = sum(1 for _ in _csv.DictReader(open(os.path.join(proj, "out", "positions_rcp.csv"))))
+    nf = sum(1 for _ in _csv.DictReader(open(os.path.join(proj, "out", "positions_plan.csv"))))
+    from glowpoint import render as _R
+    ref = _R.LAST["report"]
+    want_r = sum(1 for r in ref if r["type"] not in ("waffle", "cove", "slats", "lightwell") and float(r["y"]) >= 7); want_f = sum(1 for r in ref if float(r["y"]) < 7)
+    from glowpoint import pngmark as _pm
+    good = (nr == want_r and nf == want_f and _cv2.imread(rcp) is not None and _pm.is_marked(rcp))
+    print(f"{'PASS' if good else 'FAIL'}  plans: reflected ceiling plan {nr} lights (expected {want_r}), floor plan {nf} (expected {want_f})")
+    ok &= good
     return ok
 
 

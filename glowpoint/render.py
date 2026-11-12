@@ -111,8 +111,11 @@ def warn_overlaps(report, tol=0.5):
                       f"x {r1['x']}, z {r1['z']} (and maybe more)")
 
 
+LAST = {}   # after render(): the model, the evaluated features, and the report (used by glowpoint.plan)
+
+
 def render(project, check=False, out_name="concept.png", design_file="design.json", camera=None, linework=False,
-           size=None):
+           size=None, write=True):
     m = Model(project)
     dpath = os.path.join(project, design_file)
     if os.path.exists(dpath):
@@ -177,6 +180,7 @@ def render(project, check=False, out_name="concept.png", design_file="design.jso
         if axis == "y": return m.surface(w.get("plane", "Ceiling"))["at"] + w["depth"]
         raise ValueError("axis must be 'x', 'z' or 'y'")
     ns["coffers"] = coffers
+    evaluated = list(geo)
     for L in layers:
         for f in L["features"]:
             if f["type"] in geometry: continue
@@ -185,8 +189,11 @@ def render(project, check=False, out_name="concept.png", design_file="design.jso
                 raise ValueError(f"Unknown type '{f['type']}'. Known: {sorted(lights) + sorted(geometry)}. "
                                  f"Add new types in {project}/types/ or a GLOWPOINT_TYPES folder.")
             F.set_color(fe.get("cct", design.get("cct")), fe.get("light_color"))
-            lights[f["type"]](cv, fe)
+            lights[f["type"]](cv, fe); evaluated.append(fe)
     F.set_color()
+    LAST.clear(); LAST.update(model=m, features=evaluated, report=cv.report, design=design)
+    if not write:
+        return cv.report
     warn_overlaps(cv.report)
     img = cv.finish()
     if design.get("legend", True):

@@ -3,6 +3,9 @@
 Newest first. Each version says what a user or an agent will notice. The version is in
 `glowpoint/__init__.py`, and `python3 -m glowpoint.doctor` prints it.
 
+## 0.14.0 — 2026-11-12
+- `glowpoint.plan`: a reflected ceiling plan (`--rcp`) or a floor plan of the design, to scale, with walls, columns, furniture, ceiling heights and elements, a symbol and legend line for each layer, a scale bar, and the viewer's position. In the menu and in AGENTS (Task: plans).
+
 ## 0.13.4 — 2026-11-12
 - From a cold test with a fresh agent: `calibrate` warns for nearly one-point images (the lens from lines is not reliable); `project save` never overwrites a save from the same minute; a clearer note when there is no design.json yet. AGENTS: read sections 1–2 before the first reply; do not ask about the original with one image; what to do when measurements disagree, and what to model.
 
