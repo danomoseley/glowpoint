@@ -227,6 +227,10 @@ glowpoint warns when two fixtures from different layers are at the same place (f
 
 ## Light and ceiling types
 
+![One example of each type](docs/menu.png)
+
+[`docs/menu.png`](docs/menu.png) shows one example of each type on the lobby model. Rebuild it with `python3 docs/make_menu.py` (the designs are in `docs/menu_tiles.json`; add a tile when you add a type).
+
 | Type | What it is |
 |---|---|
 | [`glow`](#glow) | A soft glow around a point: a table lamp, floor lamp, or candle in the drawing |

@@ -11,7 +11,7 @@ Checks:
   - every README link to a section (#anchor) and to a file in the repo works
 Run it after every change, and before every push (the pre-push hook does this).
 """
-import inspect, os, re, sys
+import json, inspect, os, re, sys
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 sys.path.insert(0, ROOT)
 from glowpoint import features as F, render as R, expr as E
@@ -68,6 +68,11 @@ menu = AGENTS[AGENTS.find("## Menu for the user"):AGENTS.find("## How-to for the
 for name in types:
     if f"(`{name}`)" not in menu:
         problems.append(f"type {name} is not in the user menu in AGENTS.md")
+
+tiles = {x["type"] for x in json.load(open(os.path.join(ROOT, "docs", "menu_tiles.json")))["tiles"]}
+for name in types:
+    if name not in tiles:
+        problems.append(f"type {name} has no tile in docs/menu_tiles.json (then run python3 docs/make_menu.py)")
 
 # 4. tools
 tools = [os.path.splitext(f)[0] for f in os.listdir(os.path.join(ROOT, "glowpoint"))

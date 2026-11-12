@@ -3,6 +3,10 @@
 Newest first. Each version says what a user or an agent will notice. The version is in
 `glowpoint/__init__.py`, and `python3 -m glowpoint.doctor` prints it.
 
+## 0.11.7 — 2026-11-12
+- `docs/menu.png`: one labelled example of each light and ceiling type (`docs/make_menu.py` rebuilds it); agents send it with the welcome and the menu.
+- Agents: the model check is one short question; the full checklist only when the user is unsure.
+
 ## 0.11.6 — 2026-11-12
 - Agents: the users are professional lighting designers: no lighting explanations or coaching; Part C is a short brief in their terms; say plainly when a product or optic cannot be drawn exactly.
 

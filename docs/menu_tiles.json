@@ -1,0 +1,487 @@
+{
+ "note": "Designs for docs/menu.png, on the lobby test model. Rebuild with: python3 docs/make_menu.py",
+ "tiles": [
+  {
+   "type": "downlight",
+   "caption": "Downlights",
+   "layers": [
+    {
+     "name": "downlight",
+     "description": "3 over the reception desk",
+     "features": [
+      {
+       "type": "downlight",
+       "plane": "Left soffit",
+       "x": "box('Desk').xc",
+       "z": "spaced(box('Desk').z0, box('Desk').z1, 3)",
+       "d": "inch(8)",
+       "beam_to": "box('Desk').top",
+       "pool_r": 1.4
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "type": "wallwasher",
+   "caption": "Wallwashers",
+   "layers": [
+    {
+     "name": "w",
+     "description": "",
+     "features": [
+      {
+       "type": "wallwasher",
+       "wall": "Back wall",
+       "plane": "Ceiling",
+       "range": "surf('Back wall').X",
+       "spacing": 5,
+       "offset": 3
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "type": "wash",
+   "caption": "Wall wash / ceiling slot",
+   "layers": [
+    {
+     "name": "wash",
+     "description": "left wall, from a slot in the soffit",
+     "features": [
+      {
+       "type": "wash",
+       "plane": "Left wall",
+       "range": "(box('Desk').z1 + 2, surf('Left wall').Z[1])",
+       "fade": 9,
+       "strength": 0.75,
+       "slot": {
+        "plane": "Left soffit",
+        "offset": 2
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "type": "sconce",
+   "caption": "Sconces",
+   "layers": [
+    {
+     "name": "sconce",
+     "description": "4 on the wall behind the desk",
+     "features": [
+      {
+       "type": "sconce",
+       "plane": "Left wall",
+       "along": "spaced(box('Desk').z0, box('Desk').z1, 4)",
+       "y": 6.5
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "type": "uplight",
+   "caption": "In-floor uplights",
+   "layers": [
+    {
+     "name": "uplight",
+     "description": "every visible column face",
+     "features": [
+      {
+       "type": "uplight",
+       "faces": "visible_faces('column')",
+       "offset": 0.5,
+       "fade": 12
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "type": "track",
+   "caption": "Track: mountings and aperture sizes",
+   "layers": [
+    {
+     "name": "track",
+     "description": "surface track, size M heads aimed at the right wall",
+     "features": [
+      {
+       "type": "track",
+       "plane": "Ceiling",
+       "mounting": "surface",
+       "at": 34,
+       "range": [
+        18,
+        58
+       ],
+       "aperture": "M",
+       "spacing": 5,
+       "tilt": 30,
+       "pan": 0,
+       "beam": 25
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "type": "slots",
+   "caption": "Ceiling slots and channels",
+   "layers": [
+    {
+     "name": "slots",
+     "description": "lit slot in the left soffit",
+     "features": [
+      {
+       "type": "slots",
+       "plane": "Ceiling",
+       "X": [
+        -12,
+        34
+       ],
+       "Z": [
+        20,
+        60
+       ],
+       "direction": "x",
+       "pitch": 8,
+       "w": "inch(4)",
+       "style": "lens"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "type": "pendant",
+   "caption": "Pendants (here in coffers)",
+   "layers": [
+    {
+     "name": "waffle",
+     "description": "square coffers over the front hall",
+     "features": [
+      {
+       "type": "waffle",
+       "plane": "Ceiling",
+       "X": "inset(gap('Column L1', 'Column R1'), 3)",
+       "Z": "(surf('Ceiling').Z[0], centre_line('Column L1', 'Column R1', 'Z'))",
+       "module": "inch(20)",
+       "rib": "inch(4)",
+       "depth": "inch(6)",
+       "align": "centre",
+       "lit": false
+      }
+     ]
+    },
+    {
+     "name": "pendant",
+     "description": "a few pendants from the coffers",
+     "features": [
+      {
+       "type": "pendant",
+       "from_y": "coffers('Waffle','y')",
+       "x": "coffers('Waffle','x')[2::5]",
+       "z": "coffers('Waffle','z')[4::9]",
+       "y": 16,
+       "d": 1.0,
+       "h": 0.7
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "type": "linear_pendant",
+   "caption": "Linear pendants",
+   "layers": [
+    {
+     "name": "linear_pendant",
+     "description": "direct/indirect, right aisle at the back",
+     "features": [
+      {
+       "type": "linear_pendant",
+       "plane": "Ceiling",
+       "x": 6,
+       "z": "every(25, 55, 10)",
+       "drop": 8,
+       "length": 8
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "type": "fixture",
+   "caption": "Specific fixture, from its parts",
+   "layers": [
+    {
+     "name": "waffle",
+     "description": "square coffers over the front hall",
+     "features": [
+      {
+       "type": "waffle",
+       "plane": "Ceiling",
+       "X": "inset(gap('Column L1', 'Column R1'), 3)",
+       "Z": "(surf('Ceiling').Z[0], centre_line('Column L1', 'Column R1', 'Z'))",
+       "module": "inch(20)",
+       "rib": "inch(4)",
+       "depth": "inch(6)",
+       "align": "centre",
+       "lit": false
+      }
+     ]
+    },
+    {
+     "name": "fixture",
+     "description": "12 in round fixture in every 2nd coffer",
+     "features": [
+      {
+       "type": "fixture",
+       "fixture": "round-12in-downlight",
+       "x": "coffers('Waffle','x')[::2]",
+       "z": "coffers('Waffle','z')[::2]",
+       "y": "coffers('Waffle','y')"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "type": "object_light",
+   "caption": "Light from furniture",
+   "layers": [
+    {
+     "name": "o",
+     "description": "",
+     "features": [
+      {
+       "type": "object_light",
+       "box": "Desk",
+       "up": 0.8,
+       "down": 0.8,
+       "under_y": 3.0,
+       "spread": 2.5,
+       "edge": "top"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "type": "projection",
+   "caption": "Projected patterns",
+   "layers": [
+    {
+     "name": "p",
+     "description": "",
+     "features": [
+      {
+       "type": "projection",
+       "plane": "Floor",
+       "at": [
+        6,
+        30
+       ],
+       "size": [
+        16,
+        14
+       ],
+       "pattern": "dapple"
+      },
+      {
+       "type": "projection",
+       "plane": "Right wall",
+       "at": [
+        40,
+        8
+       ],
+       "size": [
+        10,
+        8
+       ],
+       "pattern": "window",
+       "panes": [
+        3,
+        2
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "type": "glow",
+   "caption": "Lamp glow",
+   "layers": [
+    {
+     "name": "g",
+     "description": "",
+     "features": [
+      {
+       "type": "glow",
+       "x": "box('Desk').xc",
+       "y": 5.5,
+       "z": "box('Desk').zc",
+       "r": 3,
+       "halo": 0.8
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "type": "waffle",
+   "caption": "Coffers, square or round",
+   "layers": [
+    {
+     "name": "waffle",
+     "description": "square coffers over the front hall",
+     "features": [
+      {
+       "type": "waffle",
+       "plane": "Ceiling",
+       "X": "inset(gap('Column L1', 'Column R1'), 3)",
+       "Z": "(surf('Ceiling').Z[0], centre_line('Column L1', 'Column R1', 'Z'))",
+       "module": "inch(20)",
+       "rib": "inch(4)",
+       "depth": "inch(6)",
+       "align": "centre",
+       "lit": false
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "type": "cove",
+   "caption": "Coves: ceiling or wall",
+   "layers": [
+    {
+     "name": "cove (perimeter)",
+     "description": "lowered border over the back hall",
+     "features": [
+      {
+       "type": "cove",
+       "kind": "perimeter",
+       "plane": "Ceiling",
+       "X": "inset(gap('Column L1', 'Column R1'), 1)",
+       "Z": [
+        60,
+        108
+       ],
+       "border": 2.0,
+       "drop": 1.0
+      }
+     ]
+    },
+    {
+     "name": "cove (wall)",
+     "description": "lit ledge on the right wall",
+     "features": [
+      {
+       "type": "cove",
+       "kind": "wall",
+       "name": "Right cove",
+       "plane": "Right wall",
+       "range": [
+        62,
+        108
+       ],
+       "y": 15,
+       "depth": 1.0,
+       "ceiling": "Ceiling"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "type": "slats",
+   "caption": "Slats and baffles",
+   "layers": [
+    {
+     "name": "slats",
+     "description": "backlit wood slats over the left aisle",
+     "features": [
+      {
+       "type": "slats",
+       "X": "(surf('Soffit step').at, inset(gap('Column L1', 'Column R1'), 3)[0])",
+       "Z": "(surf('Ceiling').Z[0], surf('Back wall').at)",
+       "y": 21,
+       "h": "inch(6)",
+       "w": "inch(3)",
+       "pitch": 1.0,
+       "direction": "x",
+       "color": "wood",
+       "backlit": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "type": "lightwell",
+   "caption": "Light wells and skylights",
+   "layers": [
+    {
+     "name": "lightwell",
+     "description": "two round skylights in the back hall",
+     "features": [
+      {
+       "type": "lightwell",
+       "name": "Well 1",
+       "shape": "round",
+       "x": 0,
+       "z": 32,
+       "d": 8,
+       "depth": 4
+      },
+      {
+       "type": "lightwell",
+       "name": "Well 2",
+       "shape": "rect",
+       "X": [
+        14,
+        26
+       ],
+       "Z": [
+        26,
+        38
+       ],
+       "depth": 4
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "type": "luminous",
+   "caption": "Luminous ceilings and walls",
+   "layers": [
+    {
+     "name": "luminous",
+     "description": "back wall as a light wall with 4 ft panels",
+     "features": [
+      {
+       "type": "luminous",
+       "plane": "Ceiling",
+       "X": [
+        -8,
+        18
+       ],
+       "Z": [
+        18,
+        45
+       ],
+       "grid": 4.0
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

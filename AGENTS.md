@@ -42,8 +42,8 @@ If the new version stops with an error on the user's project, tell the user, con
 12. **Before every commit and push, update README.md, AGENTS.md, and CHANGELOG.md** (raise the version in `glowpoint/__init__.py` for a change in behaviour; a session that cannot push does not, see rule 18) so they describe every change: new types, options, expressions, tools, and behaviour. `python3 tests/test_docs.py` checks this. Turn on the pre-push hook once in each clone with `git config core.hooksPath .githooks`: it runs the documentation test and all tests, and stops a push that fails.
 13. **After a code change, run the tests:** `python3 tests/test_docs.py`, `python3 tests/test_render.py`, `python3 tests/test_calibrate.py`, `python3 tests/test_detect.py`, and `python3 tests/test_patch.py`.
 
-14. **Draw only with glowpoint.** Never edit or draw on the user's image yourself, and never make an image with an image-generation tool. Show the user only files that glowpoint wrote in the project's `out/` folder, and give the path of each one.
-15. **Stop after the model setup.** Send the user `out/check.png` as an image (rule 16), give the main numbers of the calibration report in plain words, and list what you modelled and what you assumed. With the first check image, show Part B of the how-to (after that, one or two lines are enough), and **point out the parts you are least sure of** (for example a hidden end of an object, or a scale from an assumed dimension), so the user looks there first. Design lighting only after the user confirms the model: if the model is wrong, every light is wrong.
+14. **Draw only with glowpoint.** Never edit or draw on the user's image yourself, and never make an image with an image-generation tool. Show the user only files that glowpoint wrote in the project's `out/` folder (and the example picture `docs/menu.png`), and give the path of each one.
+15. **Stop after the model setup.** Send the user `out/check.png` as an image (rule 16), give the main numbers of the calibration report in plain words, and list what you modelled and what you assumed. Ask the short question of Part B of the how-to (the full checklist only if the user is unsure), and **point out the parts you are least sure of** (for example a hidden end of an object, or a scale from an assumed dimension), so the user looks there first. Design lighting only after the user confirms the model: if the model is wrong, every light is wrong.
 16. **Send the image after every render.** After each render, put the image file itself into the conversation, so the user sees the picture: `out/concept.png` after a lighting change (or the `--out` name you used), `out/check.png` after a model setup. Display it or attach it as a file, with its path. A file name, a description, or a link to a folder is not enough. Then give a short plain-text list of the lights (type, count, spacing, heights) from `out/positions.csv`, and at most one tip about an option the user has not used yet (rule 17).
     **Do not paste JSON** (design.json, model.json, positions.csv) as your answer. The user wants the picture. Show JSON only when the user asks for it.
 17. **Give the how-to in small parts** (section "How-to for the user"): Part A at the start, Part B with the first check image, Part C when the model is confirmed, the menu when the user asks what is available, and at most one tip after each render. The user must feel that glowpoint is simple, and still learn every option. Show the parts as they are written; shorten them if the user already knows glowpoint.
@@ -65,7 +65,7 @@ Run all commands from the repository root (`python3 -m glowpoint.<tool>`). In a 
 
 ## Menu for the user: lights, ceilings, and plugins
 
-Show this list when the user asks what glowpoint can draw, what fixture types or options there are, or seems unsure what to ask for (rule 17). The names in brackets are the types in `design.json`; you can leave them out for the user. When the user asks about one type, give its options from that type's section in the README, in plain words, with the default values.
+Send the picture `docs/menu.png` (one labelled example of each type) with this list. Show this list when the user asks what glowpoint can draw, what fixture types or options there are, or seems unsure what to ask for (rule 17). The names in brackets are the types in `design.json`; you can leave them out for the user. When the user asks about one type, give its options from that type's section in the README, in plain words, with the default values.
 
 > **Lights**
 > - Downlights: round symbols in the ceiling, with a beam and a pool of light (`downlight`)
@@ -104,10 +104,10 @@ Show this list when the user asks what glowpoint can draw, what fixture types or
 
 | When | Show |
 |---|---|
-| Start of a conversation | Part A (short) |
+| Start of a conversation | Part A (short), with the picture `docs/menu.png` |
 | With the first check image | Part B |
 | When the user confirms the model | Part C |
-| The user asks what is available, or seems unsure | "Menu for the user" |
+| The user asks what is available, or seems unsure | "Menu for the user", with `docs/menu.png` |
 | The user asks about one kind of light | That type's options from the README, in plain words, with defaults |
 | After each render | The image, a short list of the lights, and **at most one** short tip about an option that fits this design and that the user has not used yet (for example "A recessed track version can go next to this one as option B" or "I can find the coffers that are in your drawing"). Do not repeat a tip. |
 
@@ -123,19 +123,22 @@ Keep your own messages short and plain. Do not show JSON, file names, commands, 
 > 2. I send back a **check image** of the 3D model. You confirm it or tell me what is wrong.
 > 3. Then describe the lighting in plain words, for example "wash the back wall and put pendants over the desk". I send the drawing with the lights.
 >
-> Ask "what can you draw?" at any time for the full list of lights, ceilings, and options.
+> The picture shows the lights and ceilings that I can draw. Ask "what can you draw?" at any time for the list with options.
 
-### Part B: how to check the model (with the first check image)
+Send `docs/menu.png` as an image with Part A (it is the picture that Part A refers to).
 
-> This is your drawing with each surface of the model tinted in a colour, with its name, and a grid of 4 ft squares. Please check:
-> - **Edges:** each coloured area covers exactly its part of the drawing (floor, walls, ceiling, columns, objects), with its edges on the drawn lines.
+### Part B: checking the model (with the check image)
+
+Send the check image with only this short question:
+
+> Here is the 3D model over your drawing: each surface tinted, with its name, and a 4 ft grid. **Do the coloured areas line up with your drawing, and do the 4 ft squares look the right size?** Reply "yes", or tell me what is wrong in plain words ("the ceiling is too low", "the desk is longer", "a column is missing at the back").
+
+Then name the one or two parts you are least sure of (rule 15). Show the full checklist below only if the user is unsure what to look for, or confirms a model that looks wrong to you:
+
+> - **Edges:** each coloured area covers exactly its part of the drawing, with its edges on the drawn lines.
 > - **Grid:** the grid lines run in the same directions as the lines in your drawing, and get smaller into the distance at the same rate.
 > - **Size:** the squares are 4 ft. A door (about 7 ft) is a little less than two squares high. If sizes look wrong, give me another real dimension.
-> - **Missing objects:** everything that you want to light, or that lights refer to (a desk, a column, a bench), has its own coloured box.
->
-> Tell me what is wrong in plain words, for example "the ceiling is too low", "the desk is longer", "a column is missing at the back". Every light depends on this model, so it is worth a minute.
-
-Then add the parts that you are least sure of (rule 15).
+> - **Missing objects:** everything that you want to light, or that lights refer to, has its own coloured box.
 
 ### Part C: lighting (when the user confirms the model)
 
