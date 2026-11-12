@@ -12,6 +12,19 @@ When a user gives you this repository (often only a zip, with no other instructi
 4. If the user has not sent a sketch or render yet, ask for it, and for one or two real dimensions. If they sent one, start "Task: set up a new image" (and still ask for a real dimension if they gave none).
 5. If the user only wants to try the tool, use the lobby example: copy `projects/lobby` to `local/lobby` and render it with `--linework` (its drawing is not in the repository).
 
+## When the user sends an updated zip
+
+The user may send a newer version of glowpoint in the middle of a session. A zip from GitHub does **not** contain the user's projects (`local/` is not in the repository), so never replace or delete the old folder.
+
+1. Unzip the new zip into a **new** folder (for example `glowpoint-new/`), not over the old one. The zip from GitHub always unzips to `glowpoint-main/`, so rename one of them first.
+2. Run `python3 -m glowpoint.doctor` in the new folder. Compare its version with the old one (`glowpoint/__init__.py`).
+3. Copy the user's projects from the old `local/` folder into the new `local/` folder (the whole project folders, with the drawings, model.json, design.json, and any `types/` and `fixtures.json`).
+4. Read the new `AGENTS.md` again: the rules can change. Read the new entries in `CHANGELOG.md`, and tell the user in two or three lines what is new that matters to them.
+5. Render the current project again in the new folder (with `--check` if the project is being set up). Compare the light counts in `positions.csv` with the last render in the old folder. If something changed, tell the user and send the new image.
+6. Continue only in the new folder. Keep the old folder until the user confirms that the new version works.
+
+If the new version stops with an error on the user's project, tell the user, continue in the old folder, and send the error so the code can be fixed.
+
 ## Rules
 
 1. **Never estimate positions by eye.** Get pixel positions with `glowpoint.zoom`, and turn them into feet with `glowpoint.measure`.
@@ -25,7 +38,7 @@ When a user gives you this repository (often only a zip, with no other instructi
 9. **Use the original drawing.** `drawing.png` must be the file that the user gave you, not an output from `out/` and not an image with lights or coffers already drawn on it. glowpoint marks its own PNG outputs and refuses them as a drawing, but screenshots and JPEG copies lose that mark. If a conversation has several images, confirm with the user which one is the original. If the drawing already shows colored lights or coffers, stop and ask.
 10. **Edit JSON files by inserting or changing text**, not by writing the whole file again with a JSON library. That keeps the layout and the diffs small. In `design.json`, most text values are expressions; only `layer`, `type`, `name`, `note`, `plane`, `slot`, `fixture`, `shape`, `align`, `kind`, `direction`, `color`, `ceiling`, `style`, `top`, `mounting`, `head`, `wall`, `box`, `edge`, `pattern`, `bands_along` are plain text (and `aperture` when it is a size name such as `S`) (see the README).
 11. **Do not edit `projects/lobby` for experiments.** Copy it to `local/` first.
-12. **Before every commit and push, update README.md and AGENTS.md** so they describe every change: new types, options, expressions, tools, and behaviour. `python3 tests/test_docs.py` checks this. Turn on the pre-push hook once in each clone with `git config core.hooksPath .githooks`: it runs the documentation test and all tests, and stops a push that fails.
+12. **Before every commit and push, update README.md, AGENTS.md, and CHANGELOG.md** (raise the version in `glowpoint/__init__.py` for a change in behaviour) so they describe every change: new types, options, expressions, tools, and behaviour. `python3 tests/test_docs.py` checks this. Turn on the pre-push hook once in each clone with `git config core.hooksPath .githooks`: it runs the documentation test and all tests, and stops a push that fails.
 13. **After a code change, run the tests:** `python3 tests/test_docs.py`, `python3 tests/test_render.py`, `python3 tests/test_calibrate.py`, and `python3 tests/test_detect.py`.
 
 14. **Draw only with glowpoint.** Never edit or draw on the user's image yourself, and never make an image with an image-generation tool. Show the user only files that glowpoint wrote in the project's `out/` folder, and give the path of each one.

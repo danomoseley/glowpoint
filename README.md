@@ -17,6 +17,7 @@ The output is diagrammatic, not photorealistic. It shows **what is lit and where
 ## Contents
 
 - [Install](#install)
+- [Changes](CHANGELOG.md)
 - [Quick start](#quick-start)
 - [Sandboxes without internet (ChatGPT and others)](#sandboxes-without-internet-chatgpt-and-others)
 - [How it works](#how-it-works)
@@ -932,6 +933,8 @@ python3 -m glowpoint.render projects/lobby --design design.option-b.json --out o
 ```
 
 Only change the files in `glowpoint/` to fix a bug or add a feature for everybody.
+
+**Versions.** The version is in `glowpoint/__init__.py` (and `doctor` prints it). [CHANGELOG.md](CHANGELOG.md) lists what changed. When you change behaviour, raise the version and add a line to the changelog in the same commit.
 
 ## Notes for AI agents
 

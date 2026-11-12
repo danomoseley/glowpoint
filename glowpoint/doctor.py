@@ -10,6 +10,11 @@ import sys, platform
 
 def main():
     ok = True
+    try:
+        from glowpoint import __version__
+    except Exception:
+        __version__ = "unknown"
+    print(f"glowpoint {__version__}")
     print(f"Python  {sys.version.split()[0]}  ({platform.platform()})")
     if sys.version_info < (3, 9):
         print("  PROBLEM: Python 3.9 or newer is necessary"); ok = False

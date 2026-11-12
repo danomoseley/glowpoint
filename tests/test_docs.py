@@ -81,6 +81,12 @@ for f in sorted(set(re.findall(r"\]\((?!http|#)([^)\s]+)\)", README))):
     if not os.path.exists(os.path.join(ROOT, f)):
         problems.append(f"README links to {f}, which does not exist")
 
+# 6. version and changelog
+from glowpoint import __version__
+CHANGELOG = open(os.path.join(ROOT, "CHANGELOG.md")).read()
+if f"## {__version__}" not in CHANGELOG:
+    problems.append(f"CHANGELOG.md has no entry for the current version {__version__} (glowpoint/__init__.py)")
+
 if problems:
     print("FAIL  documentation is not up to date:")
     for p in problems: print("      -", p)
