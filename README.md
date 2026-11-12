@@ -572,6 +572,7 @@ A waffle-slab ceiling of square coffers. It changes the model, so lights hide co
 | `depth` | | Coffer depth, ft |
 | `align` | `start` | `start`: the grid starts at the far end (`Z` end) and the left edge (`X` start); a cut coffer can remain at the other edges. `centre`: only full coffers, centred in the area, with equal solid borders |
 | `lit` | true | true: coffers glow. false: coffers are plain (use this when fixtures in the coffers give the light) |
+| `replace` | false | true: erase what the drawing shows in the waffle area first, then draw the coffers. Use it for coffers that are already in the drawing (see [Coffers that are in the drawing](#coffers-that-are-in-the-drawing)) |
 
 Pendants in coffers: a pendant in every second coffer across and every third in depth, hanging from the coffer tops (Python slices select from the lists):
 
@@ -825,6 +826,27 @@ Name surfaces and boxes clearly (`Left wall`, `Column L1`, `Desk`). The design r
 
 **Hidden parts.** When part of an object is hidden (for example one end of a bench behind a column), find its limits from what you can see: the hidden end must be behind the edge that hides it (use `plane` at that edge). Then choose a value inside the limits, usually by symmetry, and write the assumption in the box's `note`. Do not model objects that are fully hidden.
 
+### Coffers that are in the drawing
+
+If the architect's drawing already shows a coffered ceiling, let glowpoint find it:
+
+```bash
+python3 -m glowpoint.detect coffers projects/new --depth 0.75 --add
+```
+
+It finds square or round coffers on the ceiling and writes a `waffle` feature with the module, the rib width (square) or the diameter (round), and the area. `out/detect_coffers.png` shows the detected coffers in red over the drawing: check that the red lines lie on the drawn coffers. With `--add`, the feature goes into `design.json` as the first layer, with `"replace": true` (the drawn coffers are erased and redrawn) and `"lit": false`. Then you can change the depth or the shape, and use `coffers()` to put a fixture or pendant in every coffer.
+
+| Option | Use |
+|---|---|
+| `--plane` | The surface with the coffers (default `Ceiling`) |
+| `--area X0 X1 Z0 Z1` | Search only in this rectangle on the surface, ft |
+| `--depth FT` | Coffer depth. A line drawing seldom shows it clearly, so give the real one (default 6 in) |
+| `--add` | Add the feature to `design.json` |
+
+Notes: the camera and the ceiling must be set up first (the detection uses them). Only full coffers are reported. If the coffers continue past the edge of the image, the area is extended to the edge of the ceiling surface, in whole modules, and the note says so. On renders the module and area are usually within an inch; the rib width within about an inch.
+
+`python3 tests/test_detect.py` tests the detection on drawings with known coffers (square and round, one-point and two-point).
+
 ### 4. Check
 
 Run `python3 -m glowpoint.render projects/new --check` and look at `out/check.png`. Each surface must follow the lines of the image. For a close check, zoom with `--model projects/new`: every red model edge must lie on a line of the image. Use `measure ... project X Y Z` to compare corners in numbers. If a surface is off, measure it again.
@@ -836,6 +858,8 @@ For a one-point image, set the lens from something square in plan, for example a
 Hand drawings are not exact. Match the model to the drawing, not to an ideal grid.
 
 ### Tests
+
+`python3 tests/test_detect.py` tests the coffer detection on drawings with known coffers.
 
 `python3 tests/test_docs.py` checks that this README and AGENTS.md describe the code: every type and each option that it reads, every expression, every tool, every plain-text key, and every link.
 

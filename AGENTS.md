@@ -16,7 +16,7 @@ glowpoint places lighting concepts on a perspective image of a space. The full r
 10. **Edit JSON files by inserting or changing text**, not by writing the whole file again with a JSON library. That keeps the layout and the diffs small. In `design.json`, most text values are expressions; only `layer`, `type`, `name`, `note`, `plane`, `slot`, `fixture`, `shape`, `align`, `kind`, `direction`, `color`, `ceiling`, `style`, `top`, `mounting`, `head`, `wall`, `box`, `edge`, `pattern`, `bands_along` are plain text (and `aperture` when it is a size name such as `S`) (see the README).
 11. **Do not edit `projects/lobby` for experiments.** Copy it to `local/` first.
 12. **Before every commit and push, update README.md and AGENTS.md** so they describe every change: new types, options, expressions, tools, and behaviour. `python3 tests/test_docs.py` checks this. Turn on the pre-push hook once in each clone with `git config core.hooksPath .githooks`: it runs the documentation test and all tests, and stops a push that fails.
-13. **After a code change, run the tests:** `python3 tests/test_docs.py`, `python3 tests/test_render.py`, and `python3 tests/test_calibrate.py`.
+13. **After a code change, run the tests:** `python3 tests/test_docs.py`, `python3 tests/test_render.py`, `python3 tests/test_calibrate.py`, and `python3 tests/test_detect.py`.
 
 Run all commands from the repository root (`python3 -m glowpoint.<tool>`). In a new environment, run `python3 -m glowpoint.doctor` first. If you cannot clone from GitHub (no internet), ask the user to upload the repository as a zip (GitHub: Code → Download ZIP).
 
@@ -25,6 +25,8 @@ Run all commands from the repository root (`python3 -m glowpoint.<tool>`). In a 
 When the user gives a fixture (a photo, a product page, a spec sheet), reproduce it with the `fixture` type: describe its parts in the fixture list (trim, lens, rings, slots) with the real dimensions, then place it. Do not paste the picture and do not draw it by hand. For "one in every coffer", use `coffers('Waffle', 'x')`, `coffers('Waffle', 'z')`, and `y = coffers('Waffle', 'y')`. Check the count in `positions.csv`, and look at a close view (for example a camera that looks up into the ceiling) to compare the drawn fixture with the user's fixture.
 
 ## Task: coffered ceilings
+
+- **If the drawing already shows coffers,** do not draw new ones over them. Run `python3 -m glowpoint.detect coffers <project> --depth FT --add` (ask the user for the depth), check `out/detect_coffers.png` (the red lines must lie on the drawn coffers), then change the waffle in `design.json` as asked. The detected feature has `"replace": true`, so the drawn coffers are erased and redrawn.
 
 - A coffered ceiling is a `waffle` feature in `design.json`: `"shape": "square"` (with `rib`) or `"shape": "round"` (with `d`, the diameter), plus `module` and `depth`. Use `"align": "centre"` for only full coffers, centred. Set `"lit": false` when fixtures in the coffers give the light.
 - One item in every coffer: `"x": "coffers('Waffle', 'x')"`, `"z": "coffers('Waffle', 'z')"`. Select some with slices: `coffers('Waffle', 'x')[1::2]`.

@@ -98,6 +98,8 @@ def waffle_draw(cv, f, base):
     """Ray-traced coffers. Changes the base image (the coffers are part of the architecture)."""
     m = cv.m; s = m.surface(f.get("name", "Waffle")); W = cv.sid(s["name"])
     ids, P = cv.ids, cv.P; mask = ids == W
+    if f.get("replace"):                     # erase the coffers drawn in the original, then draw the new ones
+        base = base.copy(); base[mask] = 255
     (x0, x1), (z0, z1) = f["X"], f["Z"]
     mod, depth = f["module"], f["depth"]
     shape = f.get("shape", "square")
