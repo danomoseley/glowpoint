@@ -50,10 +50,14 @@ If the new version stops with an error on the user's project, tell the user, con
 
 Run all commands from the repository root (`python3 -m glowpoint.<tool>`). In a new environment, run `python3 -m glowpoint.doctor` first. If you cannot clone from GitHub (no internet), ask the user to upload the repository as a zip (GitHub: Code → Download ZIP).
 
-18. **Core code changes when you cannot push (for example in ChatGPT or another sandbox).** You may change the code in `glowpoint/` when a project needs a fix or a feature that a plugin (rule 4) cannot give. Then:
+18. **Core code changes when you cannot push (for example in ChatGPT or another sandbox).** You may change the code in `glowpoint/` when a project needs a fix or a feature that a plugin (rule 4) cannot give. **First tell the user, in plain words, and ask before you start.** Most users are designers, not programmers: do not say "patch", "core", "commit", or "repository" to them. Say something like:
+
+    > "This needs a change to the glowpoint program itself, not only to your project. I can make the change here, and it will work in this conversation. At the end I will give you a small text file that lists the changes. Please send it to the person who looks after glowpoint, so they can add it for everybody. It does not contain your drawings. Until they add it, a new conversation will not have this change. Do you want me to try?"
+
+    For a large change (for example sloped ceilings or light-level calculations), say that it can take a long time and may not work well, and offer a second choice: write a short description of what is needed, for the user to send to the person who looks after glowpoint. Then:
     1. Make the change for everybody, not only for this project. Update README.md and AGENTS.md, and run the tests (rule 13). **Do not change the version number or CHANGELOG.md.** Only the maintainer sets them, when the patch goes in; two sessions would otherwise both choose the same next number.
     2. Make a patch: `python3 -m glowpoint.patch make "short title" --why "what was wrong and what you changed" --changelog "the line for the changelog"`. If you changed the version or CHANGELOG.md by mistake, the tool leaves them out and moves the new changelog lines into the patch header. It compares with the original files that `doctor` saved at the start (or give `--base` with the uploaded zip, for example `--base /mnt/data/glowpoint-main.zip`), runs the tests, and writes `local/patches/<date>-<title>.patch`.
-    3. Send the patch file to the user as a file they can download (not pasted text), and tell them: "This session changed the glowpoint code. Please send this file to the person who looks after glowpoint, or attach it to a new issue at https://github.com/danomoseley/glowpoint/issues. Until it is added, a new conversation with a new zip will not have this change."
+    3. Send the patch file to the user as a file they can download (not pasted text), and tell them: "Here is the file with the changes to the glowpoint program. Please send it (for example by email) to the person who looks after glowpoint, or attach it to a new issue at https://github.com/danomoseley/glowpoint/issues. It does not contain your drawings. Until it is added, a new conversation will not have this change, so keep this conversation if you need the change again soon."
     4. Never say that the change is in glowpoint or on GitHub. It is only in this session until the maintainer applies it. `python3 -m glowpoint.patch status` shows what you changed.
     5. Make one patch for each separate change when you can, so the maintainer can accept them one at a time. Never put the user's drawings or projects in a patch (the tool leaves out `local/` and drawings).
 
@@ -92,7 +96,7 @@ Show this list when the user asks what glowpoint can draw, what fixture types or
 > - **a new ceiling or architectural element** that changes the 3D model, for example a beam grid, a bulkhead, or a stepped soffit made of flat surfaces;
 > - **new placement words**, for example "between column A and column B" or "on every second window".
 > A fixture from a spec sheet usually needs no plugin: I describe it with the fixture type, and I can save it in a fixture list for the project so you can reuse it by name.
-> A plugin cannot change how glowpoint reads the drawing or the camera, cannot make sloped or curved surfaces, and cannot calculate light levels. Those need a change to glowpoint itself (I send a patch for that, see rule 18).
+> A plugin cannot change how glowpoint reads the drawing or the camera, cannot make sloped or curved surfaces, and cannot calculate light levels. Those need a change to the glowpoint program itself. I tell you before I try one, and afterwards I give you a small file to send to the person who looks after glowpoint, so that everybody gets the change.
 
 ## How-to for the user
 

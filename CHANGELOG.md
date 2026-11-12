@@ -3,6 +3,9 @@
 Newest first. Each version says what a user or an agent will notice. The version is in
 `glowpoint/__init__.py`, and `python3 -m glowpoint.doctor` prints it.
 
+## 0.11.4 — 2026-11-12
+- Agents: before a change to the program, tell the user in plain words and ask; no "patch" jargon; for large changes, offer a written request instead.
+
 ## 0.11.3 — 2026-11-12
 - Agents: a menu for the user with every light and ceiling type, the options for all lights, and what plugins can add (the docs test checks that every type is in it).
 
