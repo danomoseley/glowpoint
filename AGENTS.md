@@ -18,10 +18,11 @@ The user may send a newer version of glowpoint in the middle of a session. A zip
 
 1. Unzip the new zip into a **new** folder (for example `glowpoint-new/`), not over the old one. The zip from GitHub always unzips to `glowpoint-main/`, so rename one of them first.
 2. Run `python3 -m glowpoint.doctor` in the new folder. Compare its version with the old one (`glowpoint/__init__.py`).
-3. Copy the user's projects from the old `local/` folder into the new `local/` folder (the whole project folders, with the drawings, model.json, design.json, and any `types/` and `fixtures.json`).
+3. Copy the user's projects from the old `local/` folder into the new `local/` folder (the whole project folders, with the drawings, model.json, design.json, and any `types/` and `fixtures.json`), and `local/patches/` if it exists. Do **not** copy `local/.baseline/`: the new folder has its own.
 4. Read the new `AGENTS.md` again: the rules can change. Read the new entries in `CHANGELOG.md`, and tell the user in two or three lines what is new that matters to them.
 5. Render the current project again in the new folder (with `--check` if the project is being set up). Compare the light counts in `positions.csv` with the last render in the old folder. If something changed, tell the user and send the new image.
-6. Continue only in the new folder. Keep the old folder until the user confirms that the new version works.
+6. If you made core code changes in the old folder (rule 18), look in `CHANGELOG.md` to see if the new version already has them. If not, apply each patch in the new folder: `python3 -m glowpoint.patch apply local/patches/<file>.patch`, then run the tests. If a patch does not apply, tell the user, and make the change again only if it is still necessary.
+7. Continue only in the new folder. Keep the old folder until the user confirms that the new version works.
 
 If the new version stops with an error on the user's project, tell the user, continue in the old folder, and send the error so the code can be fixed.
 
@@ -39,7 +40,7 @@ If the new version stops with an error on the user's project, tell the user, con
 10. **Edit JSON files by inserting or changing text**, not by writing the whole file again with a JSON library. That keeps the layout and the diffs small. In `design.json`, most text values are expressions; only `layer`, `type`, `name`, `note`, `plane`, `slot`, `fixture`, `shape`, `align`, `kind`, `direction`, `color`, `ceiling`, `style`, `top`, `mounting`, `head`, `wall`, `box`, `edge`, `pattern`, `bands_along` are plain text (and `aperture` when it is a size name such as `S`) (see the README).
 11. **Do not edit `projects/lobby` for experiments.** Copy it to `local/` first.
 12. **Before every commit and push, update README.md, AGENTS.md, and CHANGELOG.md** (raise the version in `glowpoint/__init__.py` for a change in behaviour) so they describe every change: new types, options, expressions, tools, and behaviour. `python3 tests/test_docs.py` checks this. Turn on the pre-push hook once in each clone with `git config core.hooksPath .githooks`: it runs the documentation test and all tests, and stops a push that fails.
-13. **After a code change, run the tests:** `python3 tests/test_docs.py`, `python3 tests/test_render.py`, `python3 tests/test_calibrate.py`, and `python3 tests/test_detect.py`.
+13. **After a code change, run the tests:** `python3 tests/test_docs.py`, `python3 tests/test_render.py`, `python3 tests/test_calibrate.py`, `python3 tests/test_detect.py`, and `python3 tests/test_patch.py`.
 
 14. **Draw only with glowpoint.** Never edit or draw on the user's image yourself, and never make an image with an image-generation tool. Show the user only files that glowpoint wrote in the project's `out/` folder, and give the path of each one.
 15. **Stop after the model setup.** Send the user `out/check.png` as an image (rule 16), give the main numbers of the calibration report in plain words, and list what you modelled and what you assumed. Remind the user in one or two lines how to check it (edges on the drawn lines, grid in the drawing's directions, 4 ft squares), and **point out the parts you are least sure of** (for example a hidden end of an object, or a scale from an assumed dimension), so the user looks there first. Design lighting only after the user confirms the model: if the model is wrong, every light is wrong.
@@ -48,6 +49,15 @@ If the new version stops with an error on the user's project, tell the user, con
 17. **Show the user the how-to** (the section "How-to for the user" below) at the start of a new conversation (see "Start of a conversation"), and again when the user seems unsure what to ask. Show it as it is written; you can shorten it if the user already knows glowpoint.
 
 Run all commands from the repository root (`python3 -m glowpoint.<tool>`). In a new environment, run `python3 -m glowpoint.doctor` first. If you cannot clone from GitHub (no internet), ask the user to upload the repository as a zip (GitHub: Code → Download ZIP).
+
+18. **Core code changes when you cannot push (for example in ChatGPT or another sandbox).** You may change the code in `glowpoint/` when a project needs a fix or a feature that a plugin (rule 4) cannot give. Then:
+    1. Make the change for everybody, not only for this project. Update README.md, AGENTS.md, and CHANGELOG.md as in rule 12, and run the tests (rule 13).
+    2. Make a patch: `python3 -m glowpoint.patch make "short title" --why "what was wrong and what you changed"`. It compares with the original files that `doctor` saved at the start (or give `--base` with the uploaded zip, for example `--base /mnt/data/glowpoint-main.zip`), runs the tests, and writes `local/patches/<date>-<title>.patch`.
+    3. Send the patch file to the user as a file they can download (not pasted text), and tell them: "This session changed the glowpoint code. Please send this file to the person who looks after glowpoint, or attach it to a new issue at https://github.com/danomoseley/glowpoint/issues. Until it is added, a new conversation with a new zip will not have this change."
+    4. Never say that the change is in glowpoint or on GitHub. It is only in this session until the maintainer applies it. `python3 -m glowpoint.patch status` shows what you changed.
+    5. Make one patch for each separate change when you can, so the maintainer can accept them one at a time. Never put the user's drawings or projects in a patch (the tool leaves out `local/` and drawings).
+
+    For the maintainer, or an agent that can push: `git apply --check FILE.patch && git apply FILE.patch`, read the change, run all tests, then commit and push (the pre-push hook runs the tests).
 
 ## How-to for the user
 

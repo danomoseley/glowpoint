@@ -42,6 +42,14 @@ def main():
                 print(f"model   OK ({len(m.surfaces)} surfaces in the test lobby)")
         except Exception as e:
             print(f"model   PROBLEM: {e}"); ok = False
+    try:
+        import os
+        root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        if not os.path.isdir(os.path.join(root, ".git")):
+            from glowpoint.patch import save_baseline
+            save_baseline(root)
+    except Exception as e:
+        print(f"note: could not save the base for patches ({e})")
     print("READY" if ok else "NOT READY")
     return 0 if ok else 1
 

@@ -113,6 +113,8 @@ from glowpoint import calibrate, measure, zoom                  # each tool has 
 measure.main(["glowpoint-main/projects/lobby", "floor", "302", "444"])
 ```
 
+**Code changes in a sandbox.** A sandbox cannot push to GitHub. If the assistant changes the glowpoint code there (for example to fix a bug), it runs `python3 -m glowpoint.patch make "title" --why "..."` and gives you a `.patch` file. Send that file to the person who looks after glowpoint, or attach it to a GitHub issue. See [Patches from sessions that cannot push](#patches-from-sessions-that-cannot-push).
+
 If OpenCV has no LSD line detector (some versions), the camera setup uses a Hough line detector instead. It is a little less accurate (lens within about 1 % on the test images, instead of 0.3 %). `glowpoint.doctor` tells you which one you have.
 
 ## How it works
@@ -933,6 +935,25 @@ python3 -m glowpoint.render projects/lobby --design design.option-b.json --out o
 ```
 
 Only change the files in `glowpoint/` to fix a bug or add a feature for everybody.
+
+### Patches from sessions that cannot push
+
+A chat sandbox (ChatGPT, or any session with a zip and no GitHub access) can change the code but cannot push. `glowpoint.patch` turns those changes into one standard patch file:
+
+```bash
+python3 -m glowpoint.doctor                       # at the start: saves the original files in local/.baseline/ (when there is no .git)
+python3 -m glowpoint.patch status                 # which core files changed
+python3 -m glowpoint.patch make "Fix round coffer size" --why "diameter was read as radius"
+                                                  # writes local/patches/<date>-fix-round-coffer-size.patch and runs the tests
+python3 -m glowpoint.patch make "..." --base glowpoint-main.zip   # compare with the uploaded zip instead
+python3 -m glowpoint.patch apply FILE.patch       # apply a patch (git apply, patch -p1, or a built-in applier)
+```
+
+The patch file starts with a header (title, reason, glowpoint version, base, changed files, test results), then a normal unified diff. `local/`, drawings, `out/`, and zips are never in a patch. Binary files are listed in the header but not included.
+
+To accept a patch: `git apply --check FILE.patch && git apply FILE.patch`, read the change, run the tests, commit, and push. When a new zip is used in a session that has old patches, the agent applies them again with `patch apply` (they fail cleanly if the change is already in the new version).
+
+`python3 tests/test_patch.py` tests this: it makes a patch in a copy without git and applies it to a clean copy.
 
 **Versions.** The version is in `glowpoint/__init__.py` (and `doctor` prints it). [CHANGELOG.md](CHANGELOG.md) lists what changed. When you change behaviour, raise the version and add a line to the changelog in the same commit.
 
