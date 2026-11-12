@@ -75,7 +75,9 @@ def profile(project, name, out=None, size=900, rays=7, dimensions=True, half=Fal
     span = max(x1 - x0, y1 - y0, 1e-3)
     reach_y0 = y0
     s = (size - 300) / span
-    W, H = size, int((y1 - y0) * s + 0.45 * span * s + 330)
+    free_up = any(L.get("direction") == "up" and L.get("onto") is None for L in spec.get("lights", []))
+    top_room = 0.45 * span * s if free_up else 0
+    W, H = size, int((y1 - y0) * s + 0.45 * span * s + top_room + 330)
     img = np.full((H, W, 3), PAPER, np.uint8)
     ox, oy = W / 2 - (x0 + x1) / 2 * s, H - 110 - 0.45 * span * s + y0 * s
     P = lambda x, y: (int(round(ox + x * s)), int(round(oy - y * s)))
@@ -90,8 +92,10 @@ def profile(project, name, out=None, size=900, rays=7, dimensions=True, half=Fal
         for a in (np.linspace(-half_a, half_a, rays) if rays > 1 else ([0.0] if rays == 1 else [])):
             d = np.array([math.sin(a), math.cos(a) if up else -math.cos(a)])
             h = _hit(o, d, target) if target else None
-            if h is None:
-                end = o + d * reach; cv2.arrowedLine(img, P(*o), P(*end), col, 2, cv2.LINE_AA, tipLength=0.04); continue
+            if h is None:                                     # free rays end a little above or below the fixture
+                y_end = y1 + 0.4 * span if d[1] > 0 else y0 - 0.4 * span
+                end = o + d * min(reach, (y_end - o[1]) / d[1]) if abs(d[1]) > 1e-6 else o + d * reach
+                cv2.arrowedLine(img, P(*o), P(*end), col, 2, cv2.LINE_AA, tipLength=0.05); continue
             t, q, n, part = h
             cv2.line(img, P(*o), P(*q), col, 2, cv2.LINE_AA)
             if L.get("onto") is not None and part == L["onto"]:
@@ -122,11 +126,14 @@ def profile(project, name, out=None, size=900, rays=7, dimensions=True, half=Fal
         (tw, th_), _ = cv2.getTextSize(text, FONT, 0.55, 1)
         if horizontal: cv2.putText(img, text, ((a[0] + b[0]) // 2 - tw // 2, a[1] - 8), FONT, 0.55, INK, 1, cv2.LINE_AA)
         else: cv2.putText(img, text, (a[0] + 10, (a[1] + b[1]) // 2 + th_ // 2), FONT, 0.55, INK, 1, cv2.LINE_AA)
-    yt = P(0, y1)[1] - 40
+    yt = P(0, y1)[1] - 40 if not free_up else P(0, y0)[1] + 0.45 * span * s + 30
+    yt = int(yt)
     if dimensions: dim((P(x0, 0)[0], yt), (P(x1, 0)[0], yt), feet_inches(x1 - x0), True)
     xr = P(x1, 0)[0] + 40
     if dimensions:
-        for xx in (x0, x1): cv2.line(img, (P(xx, 0)[0], yt - 6), (P(xx, 0)[0], P(xx, y1)[1] - 4), GREY, 1)
+        for xx in (x0, x1):
+            ya = P(xx, y1)[1] - 4 if not free_up else P(xx, y0)[1] + 4
+            cv2.line(img, (P(xx, 0)[0], yt - 6 if not free_up else yt + 6), (P(xx, 0)[0], ya), GREY, 1)
         dim((xr, P(0, y1)[1]), (xr, P(0, y0)[1]), feet_inches(y1 - y0), False)
         for yy in (y0, y1): cv2.line(img, (P(x1, 0)[0] + 4, P(0, yy)[1]), (xr + 6, P(0, yy)[1]), GREY, 1)
     cv2.putText(img, f"{name.upper()}  -  SECTION", (30, 40), FONT, 0.75, INK, 2, cv2.LINE_AA)

@@ -3,6 +3,9 @@
 Newest first. Each version says what a user or an agent will notice. The version is in
 `glowpoint/__init__.py`, and `python3 -m glowpoint.doctor` prints it.
 
+## 0.15.1 — 2026-11-12
+- `fixture3d`: an up light that is not aimed onto a part lights the ceiling with a radius from its beam and the distance to the ceiling. Example `reflector-pendant-uplight` (uplight under the reflector and a second one on top).
+
 ## 0.15.0 — 2026-11-12
 - `fixture3d`: a fixture body in 3D (revolved profiles, boxes; roles housing, reflector, lens; smooth curves) drawn as a line diagram in the perspective, hidden correctly, with its light (a reflector lit by a light aimed onto it, a pool, ceiling light). Look options `fill`, `detail`, `glow`, `line`. Examples in `examples/fixtures.json`.
 - `glowpoint.profile`: the fixture's section to scale, with dimensions and light rays (reflected off the reflector).

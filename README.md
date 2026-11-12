@@ -467,7 +467,7 @@ Parts are drawn in order, so later parts are on top. All sizes in feet.
 To describe a fixture from a photo or a spec sheet: start with the outer trim (`fill` + `line`), then the lens or aperture (`fill`, `lit`), then details (`line` rings, `slots`). Use the real dimensions from the spec sheet.
 
 ### `fixture3d`
-A fixture body in 3D, drawn in the perspective as a line diagram (white body, black lines, lit reflectors and lenses in the light colour), hidden correctly behind columns and other objects. Use it when the shape of a fixture matters: a pendant with a reflector, an indirect fixture, a linear housing. It is a diagram, not a product model: a few profile points that give the right shape and the main dimensions are enough. The body is defined in a fixture list, like the flat `fixture` type, but with `"body"` (3D parts) instead of `"parts"`. Examples: `reflector-pendant` and `linear-box-pendant` in [examples/fixtures.json](examples/fixtures.json).
+A fixture body in 3D, drawn in the perspective as a line diagram (white body, black lines, lit reflectors and lenses in the light colour), hidden correctly behind columns and other objects. Use it when the shape of a fixture matters: a pendant with a reflector, an indirect fixture, a linear housing. It is a diagram, not a product model: a few profile points that give the right shape and the main dimensions are enough. The body is defined in a fixture list, like the flat `fixture` type, but with `"body"` (3D parts) instead of `"parts"`. Examples: `reflector-pendant`, `reflector-pendant-uplight` (with a second uplight on top), and `linear-box-pendant` in [examples/fixtures.json](examples/fixtures.json).
 
 ```json
 "reflector-pendant": {
@@ -490,7 +490,7 @@ Body parts, in feet, in the fixture's own axes (y up, y = 0 at the bottom; the a
 | `role` | `housing` (default, white), `reflector` (lit on the side that faces a light aimed `onto` it), `lens` (lit), `dark` |
 | `smooth` | `true`: round the profile, so a few points give a smooth curve |
 | `lights` | Light points: `at` `[x, y, z]`, `direction` `up` or `down`, `onto` (index of the part it lights), `beam` (degrees, for the section) |
-| `pool_r`, `ceiling_r` | Radius of the pool on the floor below, and of the light on the ceiling from an up light that lights no part, ft |
+| `pool_r`, `ceiling_r` | Radius of the pool on the floor below, ft. An up light that is not aimed `onto` a part (for example an uplight on top of a reflector) lights the ceiling: the radius comes from its `beam` and the distance to the ceiling, or from `ceiling_r` |
 | `style` | Default look for this fixture (see below) |
 
 In `design.json`:

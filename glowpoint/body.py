@@ -31,8 +31,9 @@ Lights inside the fixture ("lights"):
   "at"         the light point, in the fixture's own axes
   "direction"  up or down
   "onto"       the index of the part that it lights (a reflector); that part glows on the side that faces it
-  The fixture's light reaches the room as a pool of radius "pool_r" (ft) on the floor below (or on "beam_to"),
-  and an up light with nothing above it lights the ceiling ("ceiling_r").
+  The fixture's light reaches the room as a pool of radius "pool_r" (ft) on the floor below (or on "beam_to").
+  An up light that is not aimed onto a part (for example an uplight on top of the reflector) lights the
+  ceiling above it: the radius comes from its "beam" and the distance to the ceiling, or from "ceiling_r".
 
 In design.json:
   {"type": "fixture3d", "fixture": "reflector-pendant", "plane": "Ceiling", "x": [...], "z": [...],
@@ -258,8 +259,14 @@ def fixture3d(cv, f):
         lights = spec.get("lights", [])
         if any(L.get("onto") is not None or L.get("direction", "down") == "down" for L in lights):
             _pool(cv, x, z, f.get("beam_to", 0.0), f.get("pool_r", spec.get("pool_r", 0.0)))
-        if any(L.get("direction") == "up" and L.get("onto") is None for L in lights):
-            _ceiling_glow(cv, x, z, y + top_y * scale, f.get("ceiling_r", spec.get("ceiling_r", 4.0)))
+        for L in lights:
+            if L.get("direction") == "up" and L.get("onto") is None:     # an up light that lights the ceiling
+                top = y + top_y * scale
+                above = [s_["at"] for s_ in m.surfaces if s_["axis"] == 1 and s_["at"] > top + 0.3
+                         and s_["X"][0] <= x <= s_["X"][1] and s_["Z"][0] <= z <= s_["Z"][1]]
+                dist = (min(above) - top) if above else 4.0
+                r = f.get("ceiling_r", spec.get("ceiling_r")) or dist * np.tan(np.radians(L.get("beam", 90) / 2))
+                _ceiling_glow(cv, x, z, top, r)
         if f.get("cord", True) and hang is not None and hang > y + top_y * scale + 0.05:
             cv.seg([x, hang, z], [x, y + top_y * scale, z], 1)
         vis = draw_one(cv, spec, origin, f.get("rotate", 0.0), scale,
