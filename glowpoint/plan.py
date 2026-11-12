@@ -199,6 +199,9 @@ def symbol(sh, t, x, z, col, r, note="", fe=None, m=None):
         c = sh.p(x, z)
         for a in range(0, 360, 30):
             cv2.ellipse(sh.img, c, (8, 8), 0, a, a + 15, col, 2, cv2.LINE_AA)
+    elif t == "fixture3d":
+        sh.circle(x, z, max(0.25, float(r) / 2), col, 2, min_px=5)
+        c = sh.p(x, z); cv2.drawMarker(sh.img, c, col, cv2.MARKER_CROSS, 8, 1, cv2.LINE_AA)
     elif t == "linear_pendant":
         L = float(note.split()[0]) if note[:1].isdigit() else 4.0
         if "along X" in note: sh.rect((x - L / 2, x + L / 2), (z - .25, z + .25), col, 2)
@@ -314,7 +317,7 @@ def plan(project, rcp=False, show_all=False, design_file="design.json", out=None
         col = colour[name]; types = sorted({r["type"] for r in lrows})
         for r in lrows:
             if r["type"] in ("wash", "slots", "luminous", "projection", "object_light", "cove"): continue
-            symbol(sh, r["type"], float(r["x"]), float(r["z"]), col, 0.5, r.get("note") or "")
+            symbol(sh, r["type"], float(r["x"]), float(r["z"]), col, r.get("size", 0.5) or 0.5, r.get("note") or "")
         legend.append((name, types[0], f"{len(lrows)} x {', '.join(types)}", col))
         out_rows += lrows
     for x, z, label in getattr(sh, "labels", []):        # ceiling heights, on a white box, last

@@ -251,6 +251,32 @@
    ]
   },
   {
+   "type": "fixture3d",
+   "caption": "3D fixture (line drawing)",
+   "layers": [
+    {
+     "name": "f3",
+     "description": "",
+     "features": [
+      {
+       "type": "fixture3d",
+       "fixture": "reflector-pendant",
+       "plane": "Ceiling",
+       "x": [
+        0,
+        12
+       ],
+       "z": [
+        22,
+        32
+       ],
+       "y": 12
+      }
+     ]
+    }
+   ]
+  },
+  {
    "type": "object_light",
    "caption": "Light from furniture",
    "layers": [

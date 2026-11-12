@@ -227,6 +227,32 @@ def main(update=False):
     good = (nr == want_r and nf == want_f and _cv2.imread(rcp) is not None and _pm.is_marked(rcp))
     print(f"{'PASS' if good else 'FAIL'}  plans: reflected ceiling plan {nr} lights (expected {want_r}), floor plan {nf} (expected {want_f})")
     ok &= good
+
+    # 13. 3D fixtures: drawn, hidden behind a column, reflector lit, pool on the floor, section written
+    import shutil as _sh
+    _sh.copy(os.path.join(ROOT, "examples", "fixtures.json"), os.path.join(proj, "fixtures.json"))
+    L1 = {"X": [-14.818, -8.322], "Z": [50.645, 57.14]}                     # Column L1 in the lobby fixture
+    d7 = {"title": "", "legend": False, "layers": [{"name": "F3", "features": [
+        {"type": "fixture3d", "fixture": "reflector-pendant", "plane": "Ceiling", "x": [4], "z": [30], "y": 12},
+        {"type": "fixture3d", "fixture": "reflector-pendant", "plane": "Ceiling", "x": [-11.6], "z": [62], "y": 12}]}]}
+    json.dump(d7, open(os.path.join(proj, "design.f3.json"), "w"))
+    rep = render(proj, linework=True, out_name="f3.png", design_file="design.f3.json")
+    im = _cv2.imread(os.path.join(proj, "out", "f3.png"))
+    d0 = {"title": "", "legend": False, "layers": []}; json.dump(d0, open(os.path.join(proj, "design.empty.json"), "w"))
+    render(proj, linework=True, out_name="empty.png", design_file="design.empty.json")
+    im0 = _cv2.imread(os.path.join(proj, "out", "empty.png"))
+    from glowpoint.model import Model as _M
+    mm = _M(proj); px = mm.project([[4, 12.9, 30], [4, 0, 30]])
+    u, v = int(px[0][0]), int(px[0][1]); fu, fv = int(px[1][0]), int(px[1][1])
+    lit = im[v - 15:v + 15, u - 30:u + 30]; lit_b = int((lit[..., 0].astype(int) < lit[..., 2].astype(int) - 40).sum())
+    pool = (im[fv, fu].astype(int) - im0[fv, fu].astype(int))
+    from glowpoint.profile import profile as _prof
+    pp = _prof(proj, "reflector-pendant")
+    good = (len(rep) == 2 and rep[0]["visible"] and not rep[1]["visible"] and lit_b >= 15 and pool[0] < -10
+            and _cv2.imread(pp) is not None)
+    print(f"{'PASS' if good else 'FAIL'}  3D fixtures: visible {rep[0]['visible']}, hidden behind Column L1 {not rep[1]['visible']}, "
+          f"lit reflector pixels {lit_b}, pool on the floor {pool[0] < -10}, section {os.path.basename(pp)}")
+    ok &= good
     return ok
 
 

@@ -260,6 +260,7 @@ glowpoint warns when two fixtures from different layers are at the same place (f
 | [`wash`](#wash) | Wall wash from the top of a wall, optionally from a ceiling slot |
 | [`pendant`](#pendant) | Pendant on a cord, from a ceiling or from inside coffers |
 | [`fixture`](#fixture) | A specific fixture, drawn from its parts (trim, lens, rings, slots) |
+| [`fixture3d`](#fixture3d) | A 3D fixture body (pendant, reflector, linear housing) drawn as a line diagram in the perspective, with its light; also a section view |
 | [`track`](#track) | Track lighting: surface, recessed (with trim), trimless, or suspended track, with aimable heads in set aperture sizes |
 | [`slots`](#slots) | Narrow recessed lines in a ceiling: lit slots or track channels with spot heads, as lines or a grid |
 | [`linear_pendant`](#linear_pendant) | Suspended linear fixture with direct light down and indirect light up onto the ceiling |
@@ -464,6 +465,56 @@ Parts are drawn in order, so later parts are on top. All sizes in feet.
 ![A 12 in round fixture in every coffer, seen from below](docs/coffer-fixtures.png)
 
 To describe a fixture from a photo or a spec sheet: start with the outer trim (`fill` + `line`), then the lens or aperture (`fill`, `lit`), then details (`line` rings, `slots`). Use the real dimensions from the spec sheet.
+
+### `fixture3d`
+A fixture body in 3D, drawn in the perspective as a line diagram (white body, black lines, lit reflectors and lenses in the light colour), hidden correctly behind columns and other objects. Use it when the shape of a fixture matters: a pendant with a reflector, an indirect fixture, a linear housing. It is a diagram, not a product model: a few profile points that give the right shape and the main dimensions are enough. The body is defined in a fixture list, like the flat `fixture` type, but with `"body"` (3D parts) instead of `"parts"`. Examples: `reflector-pendant` and `linear-box-pendant` in [examples/fixtures.json](examples/fixtures.json).
+
+```json
+"reflector-pendant": {
+  "description": "3D: indirect pendant, an uplight under a curved reflector",
+  "body": [
+    {"kind": "revolve", "role": "reflector", "smooth": true, "profile": [[0, 1.1], [0.6, 1.03], [1.0, 0.88], [1.25, 0.65]]},
+    {"kind": "revolve", "role": "housing", "profile": [[0.03, 0.25], [0.03, 1.1]]},
+    {"kind": "revolve", "role": "housing", "profile": [[0, 0], [0.18, 0], [0.18, 0.25], [0, 0.25]]}
+  ],
+  "lights": [{"at": [0, 0.25, 0], "direction": "up", "onto": 0, "beam": 100}],
+  "pool_r": 5
+}
+```
+
+Body parts, in feet, in the fixture's own axes (y up, y = 0 at the bottom; the axis of revolution is x = z = 0):
+
+| Part key | Meaning |
+|---|---|
+| `kind` | `revolve`: a `profile` of `[r, y]` points turned around the vertical axis (domes, cones, cylinders, bowls, reflectors; use r = 0 at an end to close it). `box`: `X`, `Y`, `Z` ranges (linear housings, channels, arms) |
+| `role` | `housing` (default, white), `reflector` (lit on the side that faces a light aimed `onto` it), `lens` (lit), `dark` |
+| `smooth` | `true`: round the profile, so a few points give a smooth curve |
+| `lights` | Light points: `at` `[x, y, z]`, `direction` `up` or `down`, `onto` (index of the part it lights), `beam` (degrees, for the section) |
+| `pool_r`, `ceiling_r` | Radius of the pool on the floor below, and of the light on the ceiling from an up light that lights no part, ft |
+| `style` | Default look for this fixture (see below) |
+
+In `design.json`:
+
+| Key | Default | Meaning |
+|---|---|---|
+| `fixture` | | Name of the fixture in a fixture list |
+| `plane` | | Surface it hangs from (for the cord and `drop`) |
+| `from_y` | | Instead of `plane`: the height where the cord starts (for example the coffer tops) |
+| `x`, `z` | | Position(s) of the fixture axis |
+| `y` | | Height of the bottom of the fixture above the floor, ft |
+| `drop` | 2 | Instead of `y`: from the `plane` (or `from_y`) to the top of the fixture, ft |
+| `rotate` | 0 | Turn about the vertical axis, degrees (for boxes) |
+| `scale` | 1 | Make the whole fixture larger or smaller |
+| `cord` | true | Draw the cord from the `plane` to the fixture |
+| `pool_r`, `ceiling_r`, `beam_to` | from the fixture | Pool radius, ceiling light radius, height of the pool (0 = floor) |
+| `fill` | `white` | `white`: the body hides what is behind it. `none`: lines only |
+| `detail` | `rings` | `rings`: lines at each break of the profile and the box edges. `outline`: only the outlines |
+| `glow` | true | Lit reflectors and lenses in the light colour; `false` for plain lines |
+| `line` | 1 | Line width, pixels |
+
+**Section view.** `python3 -m glowpoint.profile <project> <fixture>` draws the fixture as a section to scale (`out/profile_<fixture>.png`): both halves of each revolved part, the axis, the overall width and height, each light point, and rays: up or down from each light, reflected off the part it is aimed `onto`. Options: `--rays N` (0 = none), `--no-dimensions`, `--half` (only the right half).
+
+In the plans, a 3D fixture is a circle of its real diameter with a cross.
 
 ### `track`
 Track lighting: a track profile along a line, with heads that you can aim. Four mounting types, as offered by architectural track makers (for example ERCO, Stucchi, Flos, iGuzzini):
@@ -735,7 +786,7 @@ Examples:
 
 Expressions run in a restricted Python evaluator with only these names (and Python arithmetic, lists, and slices).
 
-**Text that is not an expression.** These keys always hold plain text and are never evaluated: `layer`, `type`, `name`, `note`, `plane`, `slot`, `fixture`, `shape`, `align`, `kind`, `direction`, `color`, `ceiling`, `style`, `top`, `mounting`, `head`, `wall`, `box`, `edge`, `pattern`, `bands_along`. `aperture` is plain text when it is a size name (`S`), and an expression otherwise (`inch(3)`). Every other text value is an expression, so a new text option in a plugin must be added to that list in `glowpoint/render.py`, or a word such as `round` is read as a Python name.
+**Text that is not an expression.** These keys always hold plain text and are never evaluated: `layer`, `type`, `name`, `note`, `plane`, `slot`, `fixture`, `shape`, `align`, `kind`, `direction`, `color`, `ceiling`, `style`, `top`, `mounting`, `head`, `wall`, `box`, `edge`, `pattern`, `bands_along`, `fill`, `detail`. `aperture` is plain text when it is a size name (`S`), and an expression otherwise (`inch(3)`). Every other text value is an expression, so a new text option in a plugin must be added to that list in `glowpoint/render.py`, or a word such as `round` is read as a Python name.
 
 ## Outputs
 

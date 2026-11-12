@@ -3,6 +3,11 @@
 Newest first. Each version says what a user or an agent will notice. The version is in
 `glowpoint/__init__.py`, and `python3 -m glowpoint.doctor` prints it.
 
+## 0.15.0 — 2026-11-12
+- `fixture3d`: a fixture body in 3D (revolved profiles, boxes; roles housing, reflector, lens; smooth curves) drawn as a line diagram in the perspective, hidden correctly, with its light (a reflector lit by a light aimed onto it, a pool, ceiling light). Look options `fill`, `detail`, `glow`, `line`. Examples in `examples/fixtures.json`.
+- `glowpoint.profile`: the fixture's section to scale, with dimensions and light rays (reflected off the reflector).
+- Plans show 3D fixtures at their real diameter. New menu tile.
+
 ## 0.14.0 — 2026-11-12
 - `glowpoint.plan`: a reflected ceiling plan (`--rcp`) or a floor plan of the design, to scale, with walls, columns, furniture, ceiling heights and elements, a symbol and legend line for each layer, a scale bar, and the viewer's position. In the menu and in AGENTS (Task: plans).
 

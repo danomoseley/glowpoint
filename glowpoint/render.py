@@ -22,6 +22,7 @@ from . import plugins
 from . import linework as LW
 
 GEOMETRY = {"waffle": (F.waffle_prepare, F.waffle_draw)}
+from glowpoint import body as _BODY   # noqa: F401  (adds the fixture3d type)
 GEOMETRY.update(ARCH.GEOMETRY)
 
 
@@ -34,7 +35,7 @@ def evaluate(f, ns):
     if "aperture" in f:
         f = dict(f); ap = _aperture(f.pop("aperture"), ns)
         out = evaluate(f, ns); out["aperture"] = ap; return out
-    return {k: (ev(v, ns) if k not in ("layer", "type", "name", "note", "plane", "slot", "fixture", "shape", "align", "kind", "direction", "color", "ceiling", "style", "top", "mounting", "head", "wall", "box", "edge", "pattern", "bands_along") else v) for k, v in f.items()}
+    return {k: (ev(v, ns) if k not in ("layer", "type", "name", "note", "plane", "slot", "fixture", "shape", "align", "kind", "direction", "color", "ceiling", "style", "top", "mounting", "head", "wall", "box", "edge", "pattern", "bands_along", "fill", "detail") else v) for k, v in f.items()}
 
 
 LEGEND_PLACES = ("bottom-left", "bottom-right", "top-left", "top-right", "below")

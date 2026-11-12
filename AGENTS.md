@@ -77,7 +77,7 @@ Then name the one or two parts you are least sure of (rule 5). Show the full che
 8. **State your assumptions.** If the request leaves out a value, use a usual one and say which. If the user asks for something that glowpoint cannot draw exactly (a product, a beam angle, an optic), say so in one line and say what you drew instead.
 9. **Give the user a project file** at these times: when they confirm the model; when they pause or say they are done after design changes; before an updated zip; and when they ask. Run `python3 -m glowpoint.project save local/<project>` and send the file as a download, with one line ("Your project file: keep it to continue later in a new chat"). Not after every render. A chat sandbox deletes its files after some time, and this file is the only way to continue. It contains their drawing, so it goes only to them.
 10. **A new kind of light is a plugin** in `<project>/types/` (copy `examples/types/linear_strip.py`), not a change to `glowpoint/`. Give each type an `INFO` entry (a plain `name` in the user's words, a one-line `description`, an `example` request), and each fixture a `"description"`. **Tell the user when you make one:** "I made a new light type, *LED strip*. Ask for it by that name." When the user asks what you can draw, add the output of `python3 -m glowpoint.plugins list local/<project>` to the menu. For reuse, changes, and sharing, see "Custom types" in section 6.
-11. **Files:** keep projects in `local/` (never in git: drawings are often confidential), and copy `projects/lobby` before you experiment with it. Edit JSON files by inserting or changing text, not by writing the whole file again. In `design.json`, most text values are expressions; only `layer`, `type`, `name`, `note`, `plane`, `slot`, `fixture`, `shape`, `align`, `kind`, `direction`, `color`, `ceiling`, `style`, `top`, `mounting`, `head`, `wall`, `box`, `edge`, `pattern`, `bands_along` are plain text (and `aperture` when it is a size name such as `S`).
+11. **Files:** keep projects in `local/` (never in git: drawings are often confidential), and copy `projects/lobby` before you experiment with it. Edit JSON files by inserting or changing text, not by writing the whole file again. In `design.json`, most text values are expressions; only `layer`, `type`, `name`, `note`, `plane`, `slot`, `fixture`, `shape`, `align`, `kind`, `direction`, `color`, `ceiling`, `style`, `top`, `mounting`, `head`, `wall`, `box`, `edge`, `pattern`, `bands_along`, `fill`, `detail` are plain text (and `aperture` when it is a size name such as `S`).
 12. **Do not change the code in `glowpoint/`** for a project unless a plugin cannot do it, and then only as "Change the glowpoint program" in section 6 says (ask the user first).
 
 ## 4. Menu for the user: lights, ceilings, and plugins
@@ -95,6 +95,7 @@ Send the picture `docs/menu.png` (one labelled example of each type) with this l
 > - Pendants: on a cord from the ceiling or from inside coffers, with a pool of light (`pendant`)
 > - Linear pendants: direct light down and indirect light up onto the ceiling (`linear_pendant`)
 > - A specific fixture from a photo or spec sheet, drawn from its parts: trim, lens, rings, slots (`fixture`)
+> - A fixture in 3D, as a line diagram: a pendant with a curved reflector, an indirect fixture, a linear housing, with its light; and its section with dimensions (`fixture3d`)
 > - Light from furniture or architecture: up onto the ceiling, down onto the floor, an LED edge, under a shelf (`object_light`)
 > - Projected patterns: dappled light through leaves, a window shape, stripes (`projection`)
 > - A glow at a lamp that is in the drawing: a table lamp, floor lamp, or candle (`glow`)
@@ -123,6 +124,10 @@ Send the picture `docs/menu.png` (one labelled example of each type) with this l
 ### Task: show a specific fixture
 
 When the user gives a fixture (a photo, a product page, a spec sheet), reproduce it with the `fixture` type: describe its parts in the fixture list (trim, lens, rings, slots) with the real dimensions, then place it. Do not paste the picture and do not draw it by hand. For "one in every coffer", use `coffers('Waffle', 'x')`, `coffers('Waffle', 'z')`, and `y = coffers('Waffle', 'y')`. Check the count in `positions.csv`, and look at a close view (for example a camera that looks up into the ceiling) to compare the drawn fixture with the user's fixture.
+
+### Task: a fixture in 3D, and its section
+
+When the shape of a fixture matters (the user sends a photo, a spec sheet, or a sketch of a pendant, a reflector, or an indirect fixture), describe it as a `"body"` of a few simple parts in the project's `fixtures.json` (see the README, `fixture3d`): revolved profiles for round shapes (`"smooth": true` for curves), boxes for linear ones, with the main dimensions from the spec sheet; a light point with `onto` for a light aimed at a reflector. It is a diagram, not a product model. Place it with the `fixture3d` type, render, and send the image. Send the section too: `python3 -m glowpoint.profile local/<project> <fixture>`. Never paste the photo into the drawing. Give the fixture a `"description"`, and tell the user its name (rule 10). If the user wants another look, use `fill`, `detail`, `glow`, and `line`.
 
 ### Task: coffered ceilings
 
