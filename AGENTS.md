@@ -18,6 +18,10 @@ glowpoint places lighting concepts on a perspective image of a space. The full r
 12. **Before every commit and push, update README.md and AGENTS.md** so they describe every change: new types, options, expressions, tools, and behaviour. `python3 tests/test_docs.py` checks this. Turn on the pre-push hook once in each clone with `git config core.hooksPath .githooks`: it runs the documentation test and all tests, and stops a push that fails.
 13. **After a code change, run the tests:** `python3 tests/test_docs.py`, `python3 tests/test_render.py`, `python3 tests/test_calibrate.py`, and `python3 tests/test_detect.py`.
 
+14. **Draw only with glowpoint.** Never edit or draw on the user's image yourself, and never make an image with an image-generation tool. Show the user only files that glowpoint wrote in the project's `out/` folder, and give the path of each one.
+15. **Stop after the model setup.** Show the user `out/check.png`, the calibration report, and a list of what you modelled and what you assumed. Design lighting only after the user confirms the model: if the model is wrong, every light is wrong.
+16. **Report the result** of every lighting change: show `out/concept.png` and a short list of the lights (type, count, spacing, heights) from `out/positions.csv`.
+
 Run all commands from the repository root (`python3 -m glowpoint.<tool>`). In a new environment, run `python3 -m glowpoint.doctor` first. If you cannot clone from GitHub (no internet), ask the user to upload the repository as a zip (GitHub: Code → Download ZIP).
 
 ## Task: show a specific fixture
@@ -80,6 +84,7 @@ Table lamps, floor lamps, candles: `glow` at the lamp shade (measure the shade w
 
 ## Task: set up a new image
 
+0. **Project folder:** make `local/<project name>/` and copy the user's sketch into it unchanged (keep its file extension; `"drawing"` in model.json is its file name). If the user has not given a real dimension (a ceiling height, a door height, a known object), ask for one before the camera setup.
 1. **Camera:** `python3 -m glowpoint.calibrate <image> --known x1,y1,x2,y2,H --out <project>/camera.json --overlay <project>/calibration.png`
    - Read the report. Each vanishing point fit should be below 0.5° for renders (1–3° for hand drawings, with `--tol 2`), and the angles between the found directions should be within 1° of 90.
    - Look at the overlay image: each color must be one real direction of the room.
@@ -97,6 +102,8 @@ Table lamps, floor lamps, candles: `glow` at the lamp shade (measure the shade w
    Pixels: whole numbers are pixel centres; use fractions (302.5) far away, where one pixel can be more than 0.5 ft.
    Hidden parts: find the limits from the edge that hides them, choose a value inside (usually by symmetry), and write it in the box's `"note"`.
 4. **Check:** `python3 -m glowpoint.render <project> --check`, look at `out/check.png`, and zoom on the corners with `--model <project>` (red = model edges). Compare corners in numbers with `measure <project> project X Y Z`. Fix and repeat.
+5. **Coffers in the drawing:** if the ceiling shows coffers, run `python3 -m glowpoint.detect coffers <project> --depth FT --add` and check `out/detect_coffers.png` (see "Task: coffered ceilings").
+6. **Stop and show the user** `out/check.png`, the calibration report, and what you modelled and assumed (rule 15). Wait for confirmation.
 
 ## Coordinates
 
