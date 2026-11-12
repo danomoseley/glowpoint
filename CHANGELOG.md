@@ -3,6 +3,9 @@
 Newest first. Each version says what a user or an agent will notice. The version is in
 `glowpoint/__init__.py`, and `python3 -m glowpoint.doctor` prints it.
 
+## 0.11.3 — 2026-11-12
+- Agents: a menu for the user with every light and ceiling type, the options for all lights, and what plugins can add (the docs test checks that every type is in it).
+
 ## 0.11.2 — 2026-11-12
 - `detect coffers`: when it finds nothing, it says what to check instead of a Python error; `--add` again replaces the earlier detected layer.
 - Agents: when to use the coffer detector, and the steps when it fails.

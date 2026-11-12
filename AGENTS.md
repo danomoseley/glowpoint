@@ -46,7 +46,7 @@ If the new version stops with an error on the user's project, tell the user, con
 15. **Stop after the model setup.** Send the user `out/check.png` as an image (rule 16), give the main numbers of the calibration report in plain words, and list what you modelled and what you assumed. Remind the user in one or two lines how to check it (edges on the drawn lines, grid in the drawing's directions, 4 ft squares), and **point out the parts you are least sure of** (for example a hidden end of an object, or a scale from an assumed dimension), so the user looks there first. Design lighting only after the user confirms the model: if the model is wrong, every light is wrong.
 16. **Send the image after every render.** After each render, put the image file itself into the conversation, so the user sees the picture: `out/concept.png` after a lighting change (or the `--out` name you used), `out/check.png` after a model setup. Display it or attach it as a file, with its path. A file name, a description, or a link to a folder is not enough. Then give a short plain-text list of the lights (type, count, spacing, heights) from `out/positions.csv`.
     **Do not paste JSON** (design.json, model.json, positions.csv) as your answer. The user wants the picture. Show JSON only when the user asks for it.
-17. **Show the user the how-to** (the section "How-to for the user" below) at the start of a new conversation (see "Start of a conversation"), and again when the user seems unsure what to ask. Show it as it is written; you can shorten it if the user already knows glowpoint.
+17. **Show the user the how-to** (the section "How-to for the user" below) at the start of a new conversation (see "Start of a conversation"), and again when the user seems unsure what to ask. Show it as it is written; you can shorten it if the user already knows glowpoint. When the user asks what is available (lights, ceilings, options, plugins), show "Menu for the user".
 
 Run all commands from the repository root (`python3 -m glowpoint.<tool>`). In a new environment, run `python3 -m glowpoint.doctor` first. If you cannot clone from GitHub (no internet), ask the user to upload the repository as a zip (GitHub: Code → Download ZIP).
 
@@ -58,6 +58,41 @@ Run all commands from the repository root (`python3 -m glowpoint.<tool>`). In a 
     5. Make one patch for each separate change when you can, so the maintainer can accept them one at a time. Never put the user's drawings or projects in a patch (the tool leaves out `local/` and drawings).
 
     For the maintainer, or an agent that can push: `python3 -m glowpoint.patch apply FILE.patch`, read the change, and run all tests. Then raise the version in `glowpoint/__init__.py` to the next number after the current one (not the number in the patch header, which is the version the session started from), add the changelog lines from the header under it, and commit and push (the pre-push hook runs the tests). Apply several patches one at a time, each with its own version, or together under one version.
+
+## Menu for the user: lights, ceilings, and plugins
+
+Show this list when the user asks what glowpoint can draw, what fixture types or options there are, or seems unsure what to ask for (rule 17). The names in brackets are the types in `design.json`; you can leave them out for the user. When the user asks about one type, give its options from that type's section in the README, in plain words, with the default values.
+
+> **Lights**
+> - Downlights: round symbols in the ceiling, with a beam and a pool of light (`downlight`)
+> - Wallwashers: a row, recessed in the ceiling or on arms, with scallops on the wall (`wallwasher`)
+> - Wall wash from the top of a wall, optionally from a slot in the ceiling (`wash`)
+> - Sconces: light up, down, or both, optionally onto the ceiling (`sconce`)
+> - In-floor uplights that graze a wall or a column face (`uplight`)
+> - Track: surface, recessed, trimless, or suspended, with aimable heads in real aperture sizes (ERCO XS–L, Solais 2–4 in), tilt and aim, and stitch patterns (`track`)
+> - Ceiling slots: lit lines or track channels with spot heads, as lines or a grid (`slots`)
+> - Pendants: on a cord from the ceiling or from inside coffers, with a pool of light (`pendant`)
+> - Linear pendants: direct light down and indirect light up onto the ceiling (`linear_pendant`)
+> - A specific fixture from a photo or spec sheet, drawn from its parts: trim, lens, rings, slots (`fixture`)
+> - Light from furniture or architecture: up onto the ceiling, down onto the floor, an LED edge, under a shelf (`object_light`)
+> - Projected patterns: dappled light through leaves, a window shape, stripes (`projection`)
+> - A glow at a lamp that is in the drawing: a table lamp, floor lamp, or candle (`glow`)
+>
+> **Ceilings and architecture with light**
+> - Coffers: square or round, any size and depth, lit or with a fixture or pendant in each (`waffle`); I can also find coffers that are already in your drawing
+> - Coves: a recessed ceiling tray, or a lit ledge on a wall (`cove`)
+> - Slats or baffles below a ceiling, optionally lit from above (`slats`)
+> - Light wells and skylights: round or rectangular, with a glowing top and light on their walls (`lightwell`)
+> - Luminous ceilings or walls: a glowing area, with panel joints or bands (`luminous`)
+>
+> **For every light:** colour temperature (for example 2700 K, 3000 K, 4000 K; diagrammatic colours, good for warm and cool options), counts and spacing tied to the architecture ("centred on the desk", "every 4 ft", "in every second coffer"), other views of the same design, design options side by side, and a legend.
+>
+> **Plugins: things you can add.** If you need something that is not on this list, I can write a plugin, a small file in your project, without changing glowpoint:
+> - **a new kind of light**, for example an LED strip between two columns, a fixture family your office uses often, or a special symbol;
+> - **a new ceiling or architectural element** that changes the 3D model, for example a beam grid, a bulkhead, or a stepped soffit made of flat surfaces;
+> - **new placement words**, for example "between column A and column B" or "on every second window".
+> A fixture from a spec sheet usually needs no plugin: I describe it with the fixture type, and I can save it in a fixture list for the project so you can reuse it by name.
+> A plugin cannot change how glowpoint reads the drawing or the camera, cannot make sloped or curved surfaces, and cannot calculate light levels. Those need a change to glowpoint itself (I send a patch for that, see rule 18).
 
 ## How-to for the user
 
@@ -99,6 +134,8 @@ Show this to the user (rule 17):
 > **Other views and options:** ask for "a view from the doorway, looking at the desk" or "option B with all lights at 4000 K". I render it without changing the first design.
 >
 > **What I show you:** after every change, the image that glowpoint made, in this chat, and a short list of the lights with their positions in feet. If I assume a size, I tell you. If you want the design file (JSON) too, ask for it.
+>
+> **What is available:** ask me "what lights and ceilings can you draw?" for the full list, or "what options does track have?" for one type. If you need something that is not on the list, ask: I can often add it for your project as a plugin.
 >
 > **Limits:** no sloped or curved ceilings yet, no photo-realistic renders, and no footcandle calculations: the images show the lighting concept, not light levels.
 

@@ -63,6 +63,12 @@ for k in plain:
     if f"`{k}`" not in AGENTS and False:
         problems.append(f"plain-text key `{k}` is not in AGENTS.md")
 
+# 3b. the user menu in AGENTS.md names every type
+menu = AGENTS[AGENTS.find("## Menu for the user"):AGENTS.find("## How-to for the user")]
+for name in types:
+    if f"(`{name}`)" not in menu:
+        problems.append(f"type {name} is not in the user menu in AGENTS.md")
+
 # 4. tools
 tools = [os.path.splitext(f)[0] for f in os.listdir(os.path.join(ROOT, "glowpoint"))
          if f.endswith(".py") and "def main" in open(os.path.join(ROOT, "glowpoint", f)).read()] + ["render"]
