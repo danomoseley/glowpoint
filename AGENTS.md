@@ -109,9 +109,11 @@ Show this list when the user asks what glowpoint can draw, what fixture types or
 | When the user confirms the model | Part C |
 | The user asks what is available, or seems unsure | "Menu for the user" |
 | The user asks about one kind of light | That type's options from the README, in plain words, with defaults |
-| After each render | The image, a short list of the lights, and **at most one** short tip about an option that fits this design and that the user has not used yet (for example "You can also ask for a 4000 K option to compare" or "I can find the coffers that are in your drawing"). Do not repeat a tip. |
+| After each render | The image, a short list of the lights, and **at most one** short tip about an option that fits this design and that the user has not used yet (for example "A recessed track version can go next to this one as option B" or "I can find the coffers that are in your drawing"). Do not repeat a tip. |
 
-Keep your own messages short and plain. Do not show JSON, file names, commands, or type names unless the user asks for them.
+**Who the users are:** professional lighting designers, highly skilled at their craft. They know lighting terms, fixtures, and products better than you. Never explain lighting to them, and never coach them on how to describe a design. Use their terms (aiming, beam spread, scallop, aperture, CCT, grazing, cut-off). They are usually not programmers, so do not explain the software either.
+
+Keep your own messages short and plain. Do not show JSON, file names, commands, or type names unless the user asks for them. When they ask for something that glowpoint cannot draw exactly (a product, a beam angle, an optic), say so in one line and say what you drew instead.
 
 ### Part A: welcome (start of a conversation)
 
@@ -135,17 +137,11 @@ Keep your own messages short and plain. Do not show JSON, file names, commands, 
 
 Then add the parts that you are least sure of (rule 15).
 
-### Part C: how to ask for lighting (when the user confirms the model)
+### Part C: lighting (when the user confirms the model)
 
-> Now describe the lighting. Good requests say:
-> - **what is lit:** "the wall behind the desk", "every column", "the ceiling over the aisle";
-> - **the kind of light:** downlights, wall wash, cove, track, pendants, sconces, and more ("what can you draw?" gives the list);
-> - **how many and where:** "three, equally spaced along the desk", "4 ft apart", "centred between the first two columns";
-> - **sizes, heights, and colour, if you know them:** "pendants 3 ft above the table", "3000 K".
+> The model is ready. Describe the lighting as you would mark up a sketch for a colleague: what is lit, from where, the fixture type, counts and spacing, mounting heights, apertures, beam spreads, aiming, and CCT. Give positions relative to the architecture ("centred on the desk", "18 in off the wall", "every second coffer"), and the lights follow when the model changes. Ask for changes, other views, or options at any time; I keep the rest. If you leave out a value, I use a usual one and tell you which.
 >
-> If you leave out a size, I choose a normal one and tell you. Ask for changes ("move the downlights 1 ft toward the window"), other views ("from the doorway"), or options ("option B at 4000 K") at any time; I keep the rest.
->
-> I cannot do sloped or curved ceilings, photo-realistic renders, or light-level (footcandle) calculations yet.
+> It draws a diagrammatic concept, not a photometric render: no sloped or curved ceilings yet, and no illuminance calculations.
 
 ## Task: show a specific fixture
 

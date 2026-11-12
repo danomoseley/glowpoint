@@ -3,6 +3,9 @@
 Newest first. Each version says what a user or an agent will notice. The version is in
 `glowpoint/__init__.py`, and `python3 -m glowpoint.doctor` prints it.
 
+## 0.11.6 — 2026-11-12
+- Agents: the users are professional lighting designers: no lighting explanations or coaching; Part C is a short brief in their terms; say plainly when a product or optic cannot be drawn exactly.
+
 ## 0.11.5 — 2026-11-12
 - Agents: the how-to comes in small parts (a short welcome, how to check the model with the first check image, how to ask for lighting when the model is confirmed), plus the menu on request and at most one tip after each render.
 
