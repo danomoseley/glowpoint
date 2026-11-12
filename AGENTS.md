@@ -21,8 +21,44 @@ glowpoint places lighting concepts on a perspective image of a space. The full r
 14. **Draw only with glowpoint.** Never edit or draw on the user's image yourself, and never make an image with an image-generation tool. Show the user only files that glowpoint wrote in the project's `out/` folder, and give the path of each one.
 15. **Stop after the model setup.** Show the user `out/check.png`, the calibration report, and a list of what you modelled and what you assumed. Design lighting only after the user confirms the model: if the model is wrong, every light is wrong.
 16. **Report the result** of every lighting change: show `out/concept.png` and a short list of the lights (type, count, spacing, heights) from `out/positions.csv`.
+17. **Show the user the how-to** (the section "How-to for the user" below) at the start of a new conversation, after `glowpoint.doctor` passes, and again when the user seems unsure what to ask. Show it as it is written; you can shorten it if the user already knows glowpoint.
 
 Run all commands from the repository root (`python3 -m glowpoint.<tool>`). In a new environment, run `python3 -m glowpoint.doctor` first. If you cannot clone from GitHub (no internet), ask the user to upload the repository as a zip (GitHub: Code → Download ZIP).
+
+## How-to for the user
+
+Show this to the user (rule 17):
+
+> **How to work with glowpoint**
+>
+> glowpoint draws lighting concepts on your perspective sketch, placed accurately in 3D. It works in two stages.
+>
+> **Stage 1 – the model.** Send:
+> - the **original** sketch or render (not a copy with anything drawn on it),
+> - **one or two real dimensions**, for example "the ceiling is 10 ft high" or "the door is 7 ft",
+> - anything I cannot see in the image, for example "the coffers are 6 in deep".
+>
+> I build a simple 3D model of the space and show you a check image with a grid on each surface. **Look at it and confirm it, or tell me what is wrong.** Every light depends on it.
+>
+> **Stage 2 – the lighting.** Describe what is lit and where the light comes from. Good requests name:
+> - **the surface or object:** "the wall behind the desk", "every column", "the ceiling over the aisle";
+> - **the kind of light:** downlights, wall wash, cove, slot, track, pendants, sconces, uplights, a luminous ceiling;
+> - **how many and where:** "three, equally spaced along the desk", "4 ft apart", "one in every second coffer", "centered between the first two columns";
+> - **heights and sizes, if you know them:** "pendants 3 ft above the table", "4 in apertures", "a 6 in deep cove";
+> - **colour, if it matters:** "3000 K", "a warm option and a 4000 K option".
+>
+> Examples:
+> - "Wash the back wall from a slot in the ceiling, and put an uplight on every visible column face."
+> - "Add a recessed track along the right aisle with size M heads every 5 ft, aimed at the wall."
+> - "Replace the drawn coffers with 24 in round coffers, 8 in deep, with a pendant in every third one."
+>
+> **Changes:** say what to change, for example "move the downlights 1 ft toward the window" or "make the cove 2 ft wider". I keep the rest.
+>
+> **Other views and options:** ask for "a view from the doorway, looking at the desk" or "option B with all lights at 4000 K". I render it without changing the first design.
+>
+> **What I show you:** the image glowpoint made, and a list of the lights with their positions in feet. If I assume a size, I tell you.
+>
+> **Limits:** no sloped or curved ceilings yet, no photo-realistic renders, and no footcandle calculations: the images show the lighting concept, not light levels.
 
 ## Task: show a specific fixture
 
