@@ -195,9 +195,9 @@ Table lamps, floor lamps, candles: `glow` at the lamp shade (measure the shade w
 
 Set it up like a drawing (Task: set up a new image), with these differences: ask for one real dimension (a ceiling height or a door), because the camera height of a handheld photo is a guess; check that calibration used straight lines near the middle of the photo; model the furniture that lights fall on. glowpoint finds out by itself that it is a photo, and the light brightens the surfaces. If the photo is in daylight and the added light does not show, offer an evening version (`"photo_dim": 0.5` in design.json).
 
-### Task: a sloped ceiling
+### Task: a sloped, hip, vaulted, or polygon ceiling
 
-When a ceiling slopes in one direction (a shed roof, half of a gable, a sloped edge), model it as a surface with `"axis": "slope"` (see the README, "Sloped ceilings"): measure its upper edge on the level ceiling and its lower edge on the wall, and check a point on it with `measure <project> on X Y "<name>"`. Place lights on it with `x` and `z`, like on a level ceiling. Coffers, coves, slats, and light wells cannot be on a slope yet; say so if the user asks.
+Model the ceiling first (see the README, "Sloped ceilings" and the parts after it): a one-direction slope is a surface with `"axis": "slope"`; a hip or gable ceiling is one entry with `"axis": "hip"` or `"gable"` (it makes the faces; use their names, for example `Hip left`); a barrel vault is `"axis": "vault"`; an L-shaped or angled ceiling is a level surface with an `"outline"`. Measure the edges, and check points with `measure <project> on X Y "<name>"`. Place lights with `x` and `z`, like on a level ceiling. Coffers, coves, light wells, and slats (with `"drop"`) work on slopes and hip faces, not yet on vaults; say so if the user asks.
 
 ### Task: plans
 

@@ -3,6 +3,11 @@
 Newest first. Each version says what a user or an agent will notice. The version is in
 `glowpoint/__init__.py`, and `python3 -m glowpoint.doctor` prints it.
 
+## 0.18.0 — 2026-11-17
+- Coffers, recessed and perimeter coves, light wells, and slats on sloped ceilings, built in the slope (depth perpendicular, sizes along the slope). Slats take `drop`.
+- Hip and gable ceilings (`"axis": "hip"` / `"gable"` make the faces), barrel vaults (`"axis": "vault"`), and polygon outlines for any surface. Lights, plans, measure, and track work on them.
+- Surfaces can carry a frame (a turned coordinate system); one hit function for ray casting, track aiming, and measuring.
+
 ## 0.17.0 — 2026-11-17
 - Sloped ceilings: surfaces with `"axis": "slope"` (rise along X or Z). Ray casting, check image, linework, plans (outline, heights, arrow), `measure ... on X Y "Surface"`, expression `height(name, x, z)`. Downlights, pendants, linear pendants, track, flat and 3D fixtures, slots, luminous areas, washes and wallwashers work on a slope; coffers, coves, slats, and light wells give a clear error.
 - Plans: lights on or hanging from a ceiling are in the reflected ceiling plan at any height (low and sloped ceilings).

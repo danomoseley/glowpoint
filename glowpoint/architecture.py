@@ -138,11 +138,18 @@ def cove_draw(cv, f, base):
 
 
 # ---------------------------------------------------------------- slats
+def _slat_bottom(m, f):
+    """Bottom of the slats: "y" above the floor, or "drop" below the ceiling ("plane"; on a slope: below it)."""
+    if "drop" in f:
+        return m.surface(f.get("plane", "Ceiling"))["at"] - f["drop"]
+    return f["y"]
+
+
 def slats_prepare(m, f):
     """A layer of parallel slats below a ceiling. A flat 'bottom' surface marks where rays enter the layer."""
     name = f.get("name", "Slats")
     (x0, x1), (z0, z1) = f["X"], f["Z"]
-    yb = f["y"]                                                  # bottom of the slats
+    yb = _slat_bottom(m, f)                                      # bottom of the slats
     s = dict(name=name, axis=1, at=yb, X=[x0, x1], Z=[z0, z1], slats=True)
     _add(m, s)
 
@@ -151,7 +158,7 @@ def slats_draw(cv, f, base):
     m = cv.m; name = f.get("name", "Slats")
     iS = [j for j, s in enumerate(m.surfaces) if s["name"] == name][0]
     (x0, x1), (z0, z1) = f["X"], f["Z"]
-    yb = f["y"]; h = f["h"]; w = f["w"]; pitch = f["pitch"]
+    yb = _slat_bottom(m, f); h = f["h"]; w = f["w"]; pitch = f["pitch"]
     along = f.get("direction", "z")                              # slats run along Z (default) or X
     ak = 0 if along == "z" else 2                                 # the axis ACROSS the slats
     lo = x0 if ak == 0 else z0
@@ -276,7 +283,9 @@ def lightwell_draw(cv, f, base):
     fl = f.get("pool", 0.4)
     if fl > 0:
         size = f["d"]/2 if f.get("shape") == "round" else max(f["X"][1]-f["X"][0], f["Z"][1]-f["Z"][0])/2
-        P = cv.P; dfl = np.hypot(P[..., 0]-c[0], P[..., 2]-c[2])
+        P = getattr(cv, "P_world", cv.P)                              # on a slope: the floor in world coordinates
+        cw = cv.frame.to_world(c) if getattr(cv, "frame", None) is not None else c
+        dfl = np.hypot(P[..., 0]-cw[0], P[..., 2]-cw[2])
         kfl = (P[..., 1] < 0.05) & (cv.ids >= 0)
         g = fl*np.exp(-(dfl/(size*1.6))**2)
         _blend(over, kfl & (g > 0.03), _F.GLOW, g)

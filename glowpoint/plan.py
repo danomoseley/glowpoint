@@ -90,24 +90,46 @@ def bounds(m):
     return min(xs), max(xs), min(zs), max(zs)
 
 
+def outline(sh, s, col=GREY, w=1):
+    """The plan outline of a level, sloped or vaulted surface: its polygon, or its rectangle."""
+    if "outline" in s:
+        pts = s["outline"]
+        for a, b in zip(pts, pts[1:] + pts[:1]): sh.line(tuple(a), tuple(b), col, w)
+    else:
+        sh.rect(s["X"], s["Z"], col, w)
+
+
 def draw_architecture(sh, m, rcp):
     surfs = [s for s in m.surfaces if "box" not in s]          # box faces are drawn with their boxes
     floor = [s for s in surfs if s["axis"] == 1 and s["at"] <= 0.01]
     for s in floor:
-        if not rcp: sh.rect(s["X"], s["Z"], LIGHT_GREY, 1, fill=(247, 247, 247))
+        if not rcp:
+            if "outline" in s:
+                cv2.fillPoly(sh.img, [np.int32([sh.p(*p) for p in s["outline"]])], (247, 247, 247))
+                outline(sh, s, LIGHT_GREY)
+            else:
+                sh.rect(s["X"], s["Z"], LIGHT_GREY, 1, fill=(247, 247, 247))
     labels = []
     if rcp:                                   # ceiling areas, with their heights
         for s in surfs:
             if s["axis"] == 1 and s["at"] > 0.01:
-                sh.rect(s["X"], s["Z"], GREY, 1)
+                outline(sh, s)
                 for h in s.get("holes", []):
                     sh.rect(h["X"], h["Z"], GREY, 1)
                 labels.append(((s["X"][0] + s["X"][1]) / 2, s["Z"][1] - 0.04 * (s["Z"][1] - s["Z"][0]),
                                f"CLG {feet_inches(s['at'])}"))
     if rcp:                                   # sloped ceilings: outline, heights at both edges, arrow downhill
         for s in surfs:
+            if s["axis"] == 4:                                   # barrel vault: outline, crown line, heights
+                outline(sh, s)
+                k = s["k"]; lo, hi = s[s.get("along", "Z")]
+                if k == 0: sh.line((s["uc"], lo), (s["uc"], hi), GREY, 1, dashed=True)
+                else: sh.line((lo, s["uc"]), (hi, s["uc"]), GREY, 1, dashed=True)
+                mid = (lo + hi) / 2
+                labels.append(((s["uc"], mid) if k == 0 else (mid, s["uc"])) + (f"VAULT {feet_inches(s['spring'])} - {feet_inches(s['at'])}",))
+                continue
             if s["axis"] != 3: continue
-            sh.rect(s["X"], s["Z"], GREY, 1)
+            outline(sh, s)
             k = s["k"]; (u0, y0), (u1, y1) = (s["u0"], s["y0"]), (s["u1"], s["y1"])
             hi_u, lo_u = (u0, u1) if y0 > y1 else (u1, u0)
             mid = (s[s["other"]][0] + s[s["other"]][1]) / 2
@@ -335,7 +357,7 @@ def plan(project, rcp=False, show_all=False, design_file="design.json", out=None
         if not lrows: continue
         col = colour[name]; types = sorted({r["type"] for r in lrows})
         for r in lrows:
-            if r["type"] in ("wash", "slots", "luminous", "projection", "object_light", "cove"): continue
+            if r["type"] in ("wash", "slots", "luminous", "projection", "object_light", "cove", "track"): continue
             symbol(sh, r["type"], float(r["x"]), float(r["z"]), col, r.get("size", 0.5) or 0.5, r.get("note") or "")
         legend.append((name, types[0], f"{len(lrows)} x {', '.join(types)}", col))
         out_rows += lrows

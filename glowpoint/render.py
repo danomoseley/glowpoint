@@ -71,7 +71,7 @@ def check_image(m, base, step=4.0):
         for i in lst:
             msk = ids == i; tint[msk] = col; a = m.surfaces[i]["axis"]
             for k in range(3):
-                if k == a or (a == 3 and k == 1): continue        # a slope gets the plan grid (X and Z)
+                if k == a or (a in (3, 4) and k == 1): continue   # a slope or vault gets the plan grid (X and Z)
                 u = P[..., k]; gy, gx = np.gradient(u); g = np.hypot(gx, gy)
                 grid |= msk & (np.abs(u-np.round(u/step)*step) < 0.75*g) & (g < step/2)
     msk = ids >= 0
@@ -168,9 +168,14 @@ def render(project, check=False, out_name="concept.png", design_file="design.jso
             if f["type"] in geometry:
                 fe = evaluate(f, ns); fe["layer"] = L["name"]
                 pl = fe.get("plane", "Ceiling")
-                if pl in m.by_name and m.by_name[pl]["axis"] == 3:
-                    raise ValueError(f"{f['type']} cannot be on the sloped surface '{pl}' yet: use a level surface")
-                geometry[f["type"]][0](m, fe); geo.append(fe)
+                if pl in m.by_name and m.by_name[pl]["axis"] == 4:
+                    raise ValueError(f"{f['type']} cannot be on the vault '{pl}' yet: use a level or sloped surface")
+                if pl in m.by_name and m.by_name[pl]["axis"] == 3 and f.get("kind") != "wall":
+                    from glowpoint import slopeframe
+                    slopeframe.prepare(geometry[f["type"]][0], m, fe, m.by_name[pl]); fe["_slope"] = pl
+                else:
+                    geometry[f["type"]][0](m, fe)
+                geo.append(fe)
     cv = F.Canvas(m, base); cv.raycast()
     cv.photo = is_photo(base, design.get("background", "auto"), linework)
     if cv.photo: print("background: photo (light brightens the surfaces)")
@@ -178,7 +183,11 @@ def render(project, check=False, out_name="concept.png", design_file="design.jso
     cv.fixtures = plugins.load_fixtures(project, design)
     for fe in geo:
         F.set_color(fe.get("cct", design.get("cct")), fe.get("light_color"))
-        base = geometry[fe["type"]][1](cv, fe, base)
+        if fe.get("_slope"):
+            from glowpoint import slopeframe
+            base = slopeframe.draw(geometry[fe["type"]][1], cv, fe, base, m.by_name[fe["_slope"]])
+        else:
+            base = geometry[fe["type"]][1](cv, fe, base)
     cv.img = base.copy(); cv.over = base.copy()
     # 2. lights: may refer to what is visible
     vis = [(s, int((ref_ids == i).sum())) if i < ref_ids.max()+1 else (s, 0) for i, s in enumerate(m.surfaces)]

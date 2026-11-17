@@ -9,7 +9,7 @@ A position can be one number or a list; lists make one light for each combinatio
 import itertools
 import numpy as np
 import cv2
-from glowpoint.model import SLOPE, height_at, uv_keys
+from glowpoint.model import SLOPE, VAULT, height_at, uv_keys
 
 # ---- light colour. The renderer calls set_color() before each feature, so every type follows the
 # feature's "cct" (kelvin) or "light_color" ([R, G, B]). Diagram colours, not physical ones.
@@ -222,7 +222,7 @@ def downlight(cv, f):
     for x, z in itertools.product(as_list(f["x"]), as_list(f["z"])):
         c = m.to3d(s, x, z); rad = f.get("d", 8/12)/2
         th = np.linspace(0, 2*np.pi, 64, endpoint=False)
-        top = [m.to3d(s, x+rad*np.cos(t), z+rad*np.sin(t)) for t in th] if s["axis"] in (1, SLOPE) else \
+        top = [m.to3d(s, x+rad*np.cos(t), z+rad*np.sin(t)) for t in th] if s["axis"] in (1, SLOPE, VAULT) else \
             [[c[0]+rad*np.cos(t), c[1], c[2]+rad*np.sin(t)] for t in th]
         ty = f.get("beam_to", 0.0); pr = f.get("pool_r", 1.5)
         pool = [[c[0]+pr*np.cos(t), ty, c[2]+pr*np.sin(t)] for t in th]
@@ -378,10 +378,10 @@ def fixture(cv, f):
     rot = np.radians(f.get("rotate", 0)); cr, sr = np.cos(rot), np.sin(rot)
     glow = spec.get("glow")
     H, W = cv.ids.shape
-    if a in (1, SLOPE): keys = [("x", "z")]
+    if a in (1, SLOPE, VAULT): keys = [("x", "z")]
     else: keys = [("along", "y")]
     for p1, p2 in itertools.product(as_list(f[keys[0][0]]), as_list(f[keys[0][1]])):
-        if a in (1, SLOPE):
+        if a in (1, SLOPE, VAULT):
             at = f["y"] if "y" in f else height_at(s, p1, p2); c = [p1, at, p2]; ui, vi = 0, 2
         elif a == 0:
             at = s["at"]; c = [at, p2, p1]; ui, vi = 2, 1
@@ -437,7 +437,7 @@ def luminous(cv, f):
     """A glowing area on a surface: a luminous ceiling, a backlit stretch ceiling, a light wall.
     Area: X and Z on horizontal surfaces, Z and Y on walls at constant X, X and Y on walls at constant Z."""
     m = cv.m; s = m.surface(f["plane"]); i = cv.sid(f["plane"]); a = s["axis"]
-    keys = list(uv_keys(s)) if a == SLOPE else [k for k in "XYZ" if k != "XYZ"[a]]
+    keys = list(uv_keys(s)) if a in (SLOPE, VAULT) else [k for k in "XYZ" if k != "XYZ"[a]]
     P = cv.P; k = cv.ids == i
     soft = f.get("soft", 0.5)
     edge = np.ones(k.shape)
@@ -466,7 +466,7 @@ def luminous(cv, f):
             cv.img[line] = (cv.img[line]*0.75).astype(np.uint8)
     c = [0.0, 0.0, 0.0]
     for key in keys: c["XYZ".index(key)] = sum(f[key])/2
-    if a == SLOPE: c[1] = height_at(s, c[0], c[2])
+    if a in (SLOPE, VAULT): c[1] = height_at(s, c[0], c[2])
     else: c[a] = s["at"]
     area = np.prod([f[key][1]-f[key][0] for key in keys])
     cv.add(f, "luminous", f["plane"], c, visible=bool(k.any()), note=f"{area:.1f} sq ft" + (f", panels {mod*12:.0f} in" if mod else ""))
@@ -475,7 +475,7 @@ def luminous(cv, f):
 def slots(cv, f):
     """Narrow recessed lines in a surface: lit slots (lens) or track channels (track), as parallel lines or a grid."""
     m = cv.m; s = m.surface(f["plane"]); i = cv.sid(f["plane"]); a = s["axis"]
-    keys = list(uv_keys(s)) if a == SLOPE else [k for k in "XYZ" if k != "XYZ"[a]]   # the two axes of the surface
+    keys = list(uv_keys(s)) if a in (SLOPE, VAULT) else [k for k in "XYZ" if k != "XYZ"[a]]   # the two axes of the surface
     P = cv.P; k_area = cv.ids == i
     for key in keys:
         lo, hi = f[key]; c = P[..., "XYZ".index(key)]; k_area &= (c >= lo) & (c <= hi)
@@ -525,7 +525,7 @@ def slots(cv, f):
         raise ValueError("slots style must be 'lens' or 'track'")
     c = [0.0, 0.0, 0.0]
     for key in keys: c["XYZ".index(key)] = sum(f[key])/2
-    if a == SLOPE: c[1] = height_at(s, c[0], c[2])
+    if a in (SLOPE, VAULT): c[1] = height_at(s, c[0], c[2])
     else: c[a] = s["at"]
     cv.add(f, "slots", f["plane"], c, visible=bool(band.any()),
            note=f"{style} {direction}, {n_lines} lines, {w*12:.1f} in wide, {pitch:.2f} ft apart")
@@ -590,29 +590,14 @@ HOUSING = {"white": (238, 238, 238), "black": (45, 45, 45), "silver": (195, 195,
 
 
 def _ray_hit(m, o, d):
-    """Nearest surface hit of one ray (origin o, direction d), honouring holes. Returns the point or None."""
+    """Nearest surface hit of one ray (origin o, direction d), honouring holes and outlines. Returns the point or None."""
+    from glowpoint.model import hit_surface
     best, hit = np.inf, None
+    d = np.asarray(d, float)[None, :]
     for s in m.surfaces:
-        a = s["axis"]
-        if a == SLOPE:
-            k_ = s["k"]; den = d[1] - s["grad"]*d[k_]
-            if abs(den) < 1e-9: continue
-            t = (s["y0"] + s["grad"]*(o[k_] - s["u0"]) - o[1]) / den
-        else:
-            if abs(d[a]) < 1e-9: continue
-            t = (s["at"] - o[a]) / d[a]
-        if t <= 1e-6 or t >= best: continue
-        q = o + t*d; ok = True
-        for k, key in enumerate("XYZ"):
-            if k == a or (a == SLOPE and key == "Y"): continue
-            lo, hi = s[key]
-            if not (lo - 1e-6 <= q[k] <= hi + 1e-6): ok = False; break
-        if ok:
-            for hole in s.get("holes", []):
-                if all(lo < q["XYZ".index(key)] < hi for key, (lo, hi) in hole.items()): ok = False; break
-        if ok: best, hit = t, q
+        t, Q = hit_surface(s, o, d)
+        if t[0] < best and t[0] > 1e-6: best, hit = float(t[0]), Q[0]
     return hit
-
 
 def track(cv, f):
     if f.get("pattern"):
@@ -644,7 +629,7 @@ def _track(cv, f):
     for at in as_list(f["at"]):
         def P3(u, du=0.0, y=None):
             q = [0.0, 0.0, 0.0]; q[ai] = u; q[bi] = at + du; q[1] = yt if y is None else y
-            if s is not None and s["axis"] == SLOPE and "from_y" not in f:   # on a slope: follow the slope
+            if s is not None and s["axis"] in (SLOPE, VAULT) and "from_y" not in f:   # on a slope or vault: follow it
                 q[1] += height_at(s, q[0], q[2]) - yt
             return q
         # ---- the track itself
@@ -661,9 +646,10 @@ def _track(cv, f):
                 if vis.mean() < 0.5: continue
                 hull = cv2.convexHull(np.float32(pix)).astype(np.int32)
                 cv2.fillPoly(cv.img, [hull], col, cv2.LINE_AA)
-            # outline along the bottom edges of the profile
+            # outline along the bottom edges of the profile (in pieces: it follows a vault)
             for du in (-pw/2, pw/2):
-                cv.seg(P3(u0, du, ybot), P3(u1, du, ybot), 1, n=400)
+                for ua, ub in zip(edges[:-1], edges[1:]):
+                    cv.seg(P3(ua, du, ybot), P3(ub, du, ybot), 1, n=max(8, int(400*(ub-ua)/max(u1-u0, 1e-6))))
             if mounting == "suspended":
                 n = max(2, int((u1 - u0)/f.get("cable_spacing", 8.0)) + 1)
                 for u in np.linspace(u0 + 0.5, u1 - 0.5, n):
@@ -681,8 +667,10 @@ def _track(cv, f):
                 fl = f.get("flange", 12*MM)
                 trim = on & ~chan & (dperp <= pw/2 + fl)
                 cv.img[trim] = col if col != HOUSING["black"] else (90, 90, 90)
+                pe = np.arange(u0, u1, f.get("piece", 1.0)).tolist() + [u1]
                 for du in (-(pw/2 + fl), pw/2 + fl):
-                    cv.seg(P3(u0, du), P3(u1, du), 1)
+                    for ua, ub in zip(pe[:-1], pe[1:]):
+                        cv.seg(P3(ua, du), P3(ub, du), 1, n=20)
             mount_y = yt
         # ---- heads
         if "count" in f:

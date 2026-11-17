@@ -203,9 +203,10 @@ The camera has two forms.
 | `camera.yaw`, `pitch`, `roll` | Turn to the right, tilt up, and roll, in degrees |
 | `camera.vp` | One-point form: the vanishing point in pixels |
 | `camera.eye_height` | One-point form: height of the eye above the floor, in feet |
-| `surfaces[].axis` | The axis the surface is perpendicular to. `Y` = floor, ceiling, soffit. `X` = left or right wall. `Z` = back wall. `slope` = a sloped ceiling (below) |
+| `surfaces[].axis` | The axis the surface is perpendicular to. `Y` = floor, ceiling, soffit. `X` = left or right wall. `Z` = back wall. `slope`, `hip`, `gable`, `vault`: sloped and curved ceilings (below) |
 | `surfaces[].at` | Position of the surface on that axis |
 | `surfaces[].X/Y/Z` | Size of the surface on the other two axes |
+| `surfaces[].outline` | Optional: a polygon instead of a rectangle (below) |
 | `boxes[]` | Columns and objects. `kind` is `column` or `object` |
 
 Each box makes five surfaces, named `"<name> front"`, `"back"`, `"left"`, `"right"`, and `"top"`. Front is the side at the low Z end (toward the drawing's camera), left is the low X side. On the drawing, objects (like the desk) are not drawn, because the drawing already shows them. In linework, check images, and other camera views they are drawn as boxes. They always hide light that is behind them, and lights can refer to them.
@@ -222,7 +223,34 @@ Each box makes five surfaces, named `"<name> front"`, `"back"`, `"left"`, `"righ
 | `from`, `to` | `[position along that axis, height]` at the two edges of the slope |
 | `X` or `Z` | The range across (the other horizontal axis) |
 
-Lights on a slope take positions in plan, `x` and `z`, like on a level ceiling; their height comes from the slope (`height('Ceiling slope', x, z)` in an expression). Downlights lie in the slope with the beam straight down, pendants and linear pendants hang the right length, track follows the slope, flat fixtures, slots, and luminous areas sit on it, and washes, wallwashers, and 3D fixtures use its height. Coffers, coves, slats, and light wells need a level ceiling. To find a slope in an image: get its upper edge with `measure plane X Y Y <ceiling height>` and its lower edge with `measure plane X Y X <wall position>`; check a point with `measure <project> on X Y "Ceiling slope"`. The reflected ceiling plan shows a slope with its outline, the heights at both edges, and an arrow down the slope.
+Lights on a slope take positions in plan, `x` and `z`, like on a level ceiling; their height comes from the slope (`height('Ceiling slope', x, z)` in an expression). Downlights lie in the slope with the beam straight down, pendants and linear pendants hang the right length, track follows the slope, flat fixtures, slots, and luminous areas sit on it, and washes, wallwashers, and 3D fixtures use its height.
+
+**Ceiling elements on a slope.** Coffers, recessed and perimeter coves, light wells, and slats work on a slope: give the slope as their `plane`. They are built in the slope, with their depth perpendicular to it, and their sizes run along the slope (a 2 ft coffer is 2 ft along the slope); their `X` and `Z` areas stay in plan. Slats take `"drop"` (distance below the ceiling) instead of `"y"`.
+
+**Hip and gable ceilings.** Shortcuts that make the sloped faces for you:
+
+```json
+{"name": "Hip",   "axis": "hip",   "X": [-12, 12], "Z": [0, 30], "eave": 9, "ridge": 14}
+{"name": "Roof",  "axis": "gable", "X": [-12, 12], "Z": [0, 30], "eave": 9, "ridge": 14, "ridge_along": "Z"}
+```
+
+A hip makes four faces, `Hip left`, `Hip right`, `Hip front`, `Hip back` (with three- and four-sided outlines); `ridge_along` (X or Z, default the longer side) and `ridge_length` (default: all faces have the same slope; 0 = a pyramid) are optional. A gable makes two faces, `Roof left` and `Roof right` (or `front` and `back` with `"ridge_along": "X"`). Use the face names as `plane`.
+
+**Barrel vaults.** A curved ceiling, a circular arc across the room:
+
+```json
+{"name": "Vault", "axis": "vault", "along": "Z", "X": [-12, 12], "Z": [0, 30], "spring": 9, "rise": 6}
+```
+
+`along` is the direction of the vault (X or Z); `spring` is the height where the arc starts on both sides, and `rise` the height of the crown above it (at most half the width: a half circle). Lights on a vault work like on a slope (downlights, pendants, track, slots, luminous areas, washes); coffers, coves, slats, and light wells cannot be on a vault yet.
+
+**Polygon surfaces.** Any surface can have an `"outline"`, a polygon of `[u, v]` points instead of a rectangle: `[x, z]` on level and sloped ceilings and floors, `[z, y]` on a wall at constant X, `[x, y]` on a wall at constant Z. Its ranges come from the outline:
+
+```json
+{"name": "Ceiling", "axis": "Y", "at": 10, "outline": [[-12, 0], [12, 0], [12, 18], [2, 18], [2, 30], [-12, 30]]}
+```
+
+To find a slope in an image: get its upper edge with `measure plane X Y Y <ceiling height>` and its lower edge with `measure plane X Y X <wall position>`; check a point with `measure <project> on X Y "Ceiling slope"`. The reflected ceiling plan shows slopes and hip faces with their outlines, the heights at the edges, and an arrow down each slope; a vault with its crown line and heights; and polygon ceilings with their outlines.
 
 Surfaces and boxes can have a `"note"` field. Use it to record how a value was found or what was assumed, for example a hidden end of an object.
 
@@ -736,6 +764,7 @@ Parallel slats (or baffles) hanging below a ceiling, ray-traced so that you see 
 |---|---|---|
 | `name` | `Slats` | Name. Give each slat field a different name |
 | `X`, `Z` | | (start, end) of the slat area |
+| `drop` | | Instead of `y`: distance from the ceiling (`plane`) down to the bottom of the slats. Use it under a sloped ceiling |
 | `y` | | Height of the bottom of the slats, ft |
 | `h`, `w` | | Height and width of each slat, ft |
 | `pitch` | | Spacing, centre to centre, ft |
@@ -1125,7 +1154,7 @@ Two values for `x` and one for `z` make two lights.
 ## Limits
 
 - The room must have mostly square corners (two main horizontal directions at 90°). Angled walls can be added as boxes or surfaces, but they cannot set the camera.
-- Surfaces are flat rectangles. They line up with the axes, or slope in one direction (`"axis": "slope"`). No curved surfaces, and no surfaces that slope in two directions (hips, vaults) yet. Coffers, coves, slats, and light wells need a level ceiling.
+- Surfaces are flat rectangles or polygons that line up with the axes or slope in one direction, hip and gable ceilings, and barrel vaults. No domes, groin vaults, or free-form curved surfaces yet, and no coffers, coves, slats, or light wells on a vault.
 - The model only knows what the drawing shows. Areas outside the drawing are guesses.
 - After the camera setup, the surfaces are measured by hand with the measure tool.
 

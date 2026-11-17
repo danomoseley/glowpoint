@@ -294,19 +294,65 @@ def main(update=False):
     heads = [r for r in rep if r["type"] == "track head"]
     pl = plan(sp, rcp=True)
     nplan = sum(1 for _ in _csv.DictReader(open(os.path.join(sp, "out", "positions_rcp.csv"))))
-    bad = dict(dsl); bad["layers"] = [{"name": "W", "features": [{"type": "waffle", "plane": "Slope", "X": [-5, 5], "Z": [5, 15],
-                                                                  "module": 2, "depth": 0.5}]}]
-    json.dump(bad, open(os.path.join(sp, "design.bad.json"), "w"))
+    # ceiling elements on the slope: coffers 2 ft along the slope, a recessed cove, a light well, slats below it
+    el = dict(dsl); el["layers"] = [{"name": "E", "features": [
+        {"type": "waffle", "plane": "Slope", "X": [-8, 0], "Z": [6, 14], "module": 2, "rib": 0.3, "depth": 0.5},
+        {"type": "cove", "plane": "Slope", "kind": "recess", "X": [2, 7], "Z": [6, 12], "depth": 0.6, "name": "C"},
+        {"type": "lightwell", "plane": "Slope", "shape": "round", "x": 4, "z": 20, "d": 2, "depth": 1, "name": "W"},
+        {"type": "slats", "plane": "Slope", "X": [-8, 0], "Z": [20, 26], "drop": 0.5, "h": 0.3, "w": 0.1, "pitch": 0.5, "name": "S"}]}]
+    json.dump(el, open(os.path.join(sp, "design.el.json"), "w"))
+    rep_e = render(sp, linework=True, design_file="design.el.json", out_name="el.png")
+    waf = [r for r in rep_e if r["type"] == "waffle"][0]
+    # 8 ft of plan along a 1:5 slope is 8.16 ft along the slope: 4 full coffers of 2 ft
+    coffers_ok = "4 x 4 coffers" in waf["note"]
+    from glowpoint.model import Model as _Mv
+    mv = _Mv(sp); ids_e, P_e, _ = mv.raycast((350, 525))
+    # a vault refuses coffers with a clear message
+    vlt = dict(msl); vlt["surfaces"] = msl["surfaces"][:1] + [{"name": "V", "axis": "vault", "along": "Z", "X": [-10, 10], "Z": [0, 30],
+                                                              "spring": 8, "rise": 4}]
+    vp = os.path.join(os.path.dirname(proj), "vault"); os.makedirs(vp, exist_ok=True)
+    json.dump(vlt, open(os.path.join(vp, "model.json"), "w"))
+    json.dump({"title": "", "legend": False, "layers": [{"name": "W", "features": [
+        {"type": "waffle", "plane": "V", "X": [-5, 5], "Z": [5, 15], "module": 2, "rib": 0.3, "depth": 0.5}]}]},
+        open(os.path.join(vp, "design.json"), "w"))
     try:
-        render(sp, linework=True, design_file="design.bad.json", out_name="bad.png"); clear = False
+        render(vp, linework=True); clear = False
     except ValueError as e:
-        clear = "sloped" in str(e)
+        clear = "vault" in str(e) and coffers_ok and len(rep_e) == 4
     hy = sorted(float(r["y"]) for r in heads)
     good = (err < 0.01 and [float(r["y"]) for r in dl] == [11.0, 9.0] and abs(float(pe[0]["y"]) - (10 - 3)) < 0.6
             and len(heads) == 3 and hy[0] < hy[-1] - 1 and nplan == len(rep) and clear)
     print(f"{'PASS' if good else 'FAIL'}  sloped ceiling: ray hits within {err:.4f} ft, downlights at "
           f"{[float(r['y']) for r in dl]} ft, pendant {pe[0]['y']}, track heads follow the slope {hy[0]:.2f}..{hy[-1]:.2f}, "
-          f"plan {nplan}/{len(rep)}, coffers on a slope refused: {clear}")
+          f"plan {nplan}/{len(rep)}, coffers, cove, light well, slats on the slope: {coffers_ok and len(rep_e) == 4}, coffers on a vault refused: {clear}")
+    ok &= good
+
+    # 16. hip, gable, vault, polygon: ray hits at the right heights, lights on them, plan outlines
+    from glowpoint.model import Model as _Mh, height_at as _hh
+    hp = os.path.join(os.path.dirname(proj), "hip"); os.makedirs(hp, exist_ok=True)
+    cam_h = {"f": 620, "principal": [525, 350], "position": [0, 5, 1], "yaw": 0, "pitch": 30, "roll": 0}
+    json.dump({"drawing": "none.png", "units": "ft", "camera": cam_h, "surfaces": [
+        {"name": "Floor", "axis": "Y", "at": 0, "X": [-12, 12], "Z": [0, 30]},
+        {"name": "Hip", "axis": "hip", "X": [-12, 12], "Z": [0, 30], "eave": 9, "ridge": 14},
+        {"name": "L", "axis": "Y", "at": 9, "outline": [[-12, 30], [12, 30], [0, 40]]}]}, open(os.path.join(hp, "model.json"), "w"))
+    json.dump({"title": "", "legend": False, "layers": [{"name": "D", "features": [
+        {"type": "downlight", "plane": "Hip left", "x": -6, "z": 15}, {"type": "downlight", "plane": "Hip front", "x": 0, "z": 4}]}]},
+        open(os.path.join(hp, "design.json"), "w"))
+    mh = _Mh(hp); names = [x["name"] for x in mh.surfaces]
+    ids_h, P_h, _ = mh.raycast((350, 525)); errs = []
+    for i, srf in enumerate(mh.surfaces):
+        k = ids_h == i
+        if srf["axis"] in (3, 4) and k.any():
+            Q = P_h[k][::50]; errs.append(max(abs(q[1] - _hh(srf, q[0], q[2])) for q in Q))
+    rep_h = render(hp, linework=True)
+    hy = [float(r["y"]) for r in rep_h]
+    # Hip left at x = -6 is half way up (11.5); Hip front at z = 4 rises 5 ft over 12 ft: 9 + 4*5/12 = 10.67
+    good = (names[1:5] == ["Hip left", "Hip right", "Hip front", "Hip back"] and max(errs) < 0.01
+            and abs(hy[0] - 11.5) < 0.01 and abs(hy[1] - 10.67) < 0.01 and _cv2.imread(plan(hp, rcp=True)) is not None)
+    vl = _Mh(vp).by_name["V"]
+    good &= abs(_hh(vl, 0, 5) - 12) < 1e-6 and abs(_hh(vl, 10, 5) - 8) < 1e-6
+    print(f"{'PASS' if good else 'FAIL'}  hip, vault, polygon: faces {names[1:5]}, ray hits within {max(errs):.4f} ft, "
+          f"downlights at {hy}, vault crown {_hh(vl, 0, 5):.2f} and springing {_hh(vl, 10, 5):.2f}")
     ok &= good
     return ok
 

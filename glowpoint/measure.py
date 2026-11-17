@@ -76,13 +76,14 @@ def main(argv=None):
         P = cam.on_plane(num(0), num(1), v[2].upper(), num(3)); print(f"X {P[0]:.2f}  Y {P[1]:.2f}  Z {P[2]:.2f}  ft")
     elif a.command == "on":
         if len(v) != 3: ap.error('on needs: X Y "Surface name", for example 900 300 "Ceiling slope"')
-        from glowpoint.model import Model, SLOPE
+        from glowpoint.model import Model, hit_surface
         m = Model(a.source); srf = m.surface(v[2]); d = cam.ray(num(0), num(1)); C = cam.C
-        if srf["axis"] == SLOPE:
-            k = srf["k"]; t = (srf["y0"] + srf["grad"]*(C[k] - srf["u0"]) - C[1]) / (d[1] - srf["grad"]*d[k])
-        else:
-            ax = srf["axis"]; t = (srf["at"] - C[ax]) / d[ax]
-        if t <= 0: raise SystemExit("that pixel does not see this surface")
+        srf_open = {k_: v_ for k_, v_ in srf.items() if k_ not in ("holes",)}
+        t = float(hit_surface(srf_open, C, d[None, :])[0][0])
+        if not np.isfinite(t):                     # outside its edges: intersect the infinite surface instead
+            loose = {k_: v_ for k_, v_ in srf_open.items() if k_ not in ("X", "Y", "Z", "outline")}
+            t = float(hit_surface(loose, C, d[None, :])[0][0])
+        if not np.isfinite(t) or t <= 0: raise SystemExit("that pixel does not see this surface")
         P = C + t*d
         inside = all(srf[key][0] - 0.05 <= P[i] <= srf[key][1] + 0.05 for i, key in enumerate("XYZ") if key in srf)
         print(f"X {P[0]:.2f}  Y {P[1]:.2f}  Z {P[2]:.2f}  ft  (on {srf['name']}{'' if inside else ', OUTSIDE its edges'})")

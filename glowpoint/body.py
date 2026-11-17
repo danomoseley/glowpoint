@@ -56,7 +56,7 @@ import cv2
 import numpy as np
 
 from glowpoint import features as F
-from glowpoint.model import SLOPE, height_at
+from glowpoint.model import SLOPE, VAULT, height_at
 
 SEG = 48                               # segments around a revolved part
 FILL = {"housing": (252, 252, 252), "reflector": (246, 246, 246), "lens": (250, 250, 250), "dark": (70, 70, 70)}
@@ -241,7 +241,7 @@ def _pool(cv, x, z, y_to, r):
 def _ceiling_glow(cv, x, z, y_from, r):
     if r <= 0: return
     P = cv.P; above = (cv.ids >= 0) & (P[..., 1] > y_from + 0.3)
-    horiz = np.array([s["axis"] in (1, SLOPE) for s in cv.m.surfaces] + [False])[np.clip(cv.ids, -1, None)]
+    horiz = np.array([s["axis"] in (1, SLOPE, VAULT) for s in cv.m.surfaces] + [False])[np.clip(cv.ids, -1, None)]
     d = np.hypot(P[..., 0] - x, P[..., 2] - z)
     cv.glow(above & horiz, np.clip(1 - d / r, 0, 1) ** 1.5 * 0.7)
 
@@ -251,7 +251,7 @@ def fixture3d(cv, f):
     scale = f.get("scale", 1.0); top_y, bottom_y = height(spec)
     s = m.surface(f["plane"]) if "plane" in f else None
     for x, z in itertools.product(F.as_list(f["x"]), F.as_list(f["z"])):
-        hang = f.get("from_y", height_at(s, x, z) if s is not None and s["axis"] in (1, SLOPE) else None)
+        hang = f.get("from_y", height_at(s, x, z) if s is not None and s["axis"] in (1, SLOPE, VAULT) else None)
         if "y" in f: y = f["y"]
         elif hang is not None: y = hang - f.get("drop", 2.0) - top_y * scale
         else: raise ValueError("fixture3d needs 'y', or 'plane' / 'from_y' with 'drop'")
@@ -263,7 +263,7 @@ def fixture3d(cv, f):
         for L in lights:
             if L.get("direction") == "up" and L.get("onto") is None:     # an up light that lights the ceiling
                 top = y + top_y * scale
-                above = [height_at(s_, x, z) for s_ in m.surfaces if s_["axis"] in (1, SLOPE)
+                above = [height_at(s_, x, z) for s_ in m.surfaces if s_["axis"] in (1, SLOPE, VAULT)
                          and height_at(s_, x, z) > top + 0.3
                          and s_["X"][0] <= x <= s_["X"][1] and s_["Z"][0] <= z <= s_["Z"][1]]
                 dist = (min(above) - top) if above else 4.0
