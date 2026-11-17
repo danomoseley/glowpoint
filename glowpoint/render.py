@@ -112,6 +112,15 @@ def warn_overlaps(report, tol=0.5):
                       f"x {r1['x']}, z {r1['z']} (and maybe more)")
 
 
+def is_photo(img, mode="auto", linework=False):
+    """photo: light brightens the surfaces; drawing: light tints a white drawing. auto: a photo has much dark
+    or coloured area, a line drawing or a render in drawing style is mostly white."""
+    if mode in ("photo", "drawing"): return mode == "photo"
+    if linework: return False
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    return bool((hsv[..., 2] < 150).mean() > 0.25 or (hsv[..., 1] > 60).mean() > 0.25)
+
+
 LAST = {}   # after render(): the model, the evaluated features, and the report (used by glowpoint.plan)
 
 
@@ -159,6 +168,9 @@ def render(project, check=False, out_name="concept.png", design_file="design.jso
             if f["type"] in geometry:
                 fe = evaluate(f, ns); fe["layer"] = L["name"]; geometry[f["type"]][0](m, fe); geo.append(fe)
     cv = F.Canvas(m, base); cv.raycast()
+    cv.photo = is_photo(base, design.get("background", "auto"), linework)
+    if cv.photo: print("background: photo (light brightens the surfaces)")
+    F.CURRENT = cv
     cv.fixtures = plugins.load_fixtures(project, design)
     for fe in geo:
         F.set_color(fe.get("cct", design.get("cct")), fe.get("light_color"))
@@ -196,7 +208,7 @@ def render(project, check=False, out_name="concept.png", design_file="design.jso
     if not write:
         return cv.report
     warn_overlaps(cv.report)
-    img = cv.finish()
+    img = cv.finish(design.get("photo_strength", 0.7), design.get("photo_dim", 0.0))
     if design.get("legend", True):
         img = legend(img, design.get("title", "LIGHTING CONCEPT"), [(L["name"], L.get("description", "")) for L in layers],
                      design.get("legend_at", "bottom-left"))

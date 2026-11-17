@@ -83,15 +83,20 @@ def find_vps(S, shape, n=3, tol=1.0, iters=3000, seed=0):
             v = np.cross(Ls[i], Ls[j]); nv = np.linalg.norm(v)
             if nv < 1e-12: continue
             v = v/nv
+            if any(abs(float(v @ u["v"])) > np.cos(np.radians(3)) for u in vps):
+                continue                                     # the same vanishing point again (a few lines off)
             inl = left & (_err(S, v, scale, c) < tol)
             sc = w[inl].sum()
             if best is None or sc > best[0]: best = (sc, v, inl)
+        if best is None: break
         sc, v, inl = best
         for _ in range(3):                                   # refine: least squares on the inliers
             A = Ls[inl]*w[inl, None]
             v = np.linalg.svd(A)[2][-1]
             inl = left & (_err(S, v, scale, c) < tol)
         if inl.sum() < 6: break
+        if any(abs(float(v @ u["v"])) > np.cos(np.radians(5)) for u in vps):
+            left &= ~inl; continue                           # it moved onto a vanishing point we already have
         res = _err(S[inl], v, scale, c)
         d = S[inl, 2:]-S[inl, :2]
         vert = float(np.mean(np.abs(np.abs(np.degrees(np.arctan2(d[:, 1], d[:, 0]))) - 90) < 20))

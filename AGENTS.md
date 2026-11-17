@@ -68,7 +68,7 @@ Then name the one or two parts you are least sure of (rule 5). Show the full che
 ## 3. Everyday rules
 
 1. **Draw only with glowpoint.** Never edit or draw on the user's image yourself, and never use an image-generation tool. Show the user only files that glowpoint wrote in the project's `out/` folder, and `docs/menu.png`.
-2. **Use the original drawing.** `drawing.png` must be the file that the user gave you, not an output from `out/` and not an image with lights or coffers already drawn on it. glowpoint marks its own PNG outputs and refuses them, but screenshots and JPEG copies lose that mark. If a conversation has several images, confirm which one is the original (with one image, do not ask). If the drawing already shows coloured lights or coffers, stop and ask.
+2. **Use the original drawing.** The original can be a drawing, a render, or a photo (see the README, Photos; save it as `drawing.jpg` or `drawing.png`). It must be the file that the user gave you, not an output from `out/` and not an image with lights or coffers already drawn on it. glowpoint marks its own PNG outputs and refuses them, but screenshots and JPEG copies lose that mark. If a conversation has several images, confirm which one is the original (with one image, do not ask). If the drawing already shows coloured lights or coffers, stop and ask.
 3. **Never estimate positions by eye.** Get pixel positions with `glowpoint.zoom`, and turn them into feet with `glowpoint.measure`.
 4. **Model first, then lighting.** Geometry goes in `model.json`, lighting in `design.json`. Add an object (a desk, bench, or stair is a box) to `model.json` before you refer to it. In `design.json`, use relationships for anything that depends on the architecture: `"spaced(box('Desk').z0, box('Desk').z1, 3)"`, not three numbers, so the lights follow when the model is corrected.
 5. **Stop after the model setup.** Send `out/check.png` (rule 6), say in plain words what you modelled and assumed, ask the question of Part B, and **name the one or two parts you are least sure of** (for example a hidden end of an object, or a scale from an assumed dimension). Design lighting only after the user confirms the model: if the model is wrong, every light is wrong. This holds even when the user already described the lighting: send no draft before the confirmation, because a wrong first result costs more trust than a short wait. Say in one line that you will draw it as soon as they confirm, and keep their description.
@@ -190,6 +190,10 @@ Table lamps, floor lamps, candles: `glow` at the lamp shade (measure the shade w
 3. `python3 -m glowpoint.render <project>` (add `--linework` if there is no drawing; `--camera view.json` for another view).
 4. Check `out/positions.csv` and `out/concept.png`. If the legend covers part of the drawing, set `"legend_at"` (for example `"below"`).
 5. Send `out/concept.png` to the user as an image, with a short list of the lights (rule 6). Not the JSON.
+
+### Task: a photo instead of a drawing
+
+Set it up like a drawing (Task: set up a new image), with these differences: ask for one real dimension (a ceiling height or a door), because the camera height of a handheld photo is a guess; check that calibration used straight lines near the middle of the photo; model the furniture that lights fall on. glowpoint finds out by itself that it is a photo, and the light brightens the surfaces. If the photo is in daylight and the added light does not show, offer an evening version (`"photo_dim": 0.5` in design.json).
 
 ### Task: plans
 

@@ -41,7 +41,8 @@ def is_marked(path):
 
 def write(path, img):
     """cv2.imwrite and mark."""
-    import cv2
+    import cv2, os
+    if os.path.dirname(path): os.makedirs(os.path.dirname(path), exist_ok=True)
     ok = cv2.imwrite(path, img)
     mark(path)
     return ok

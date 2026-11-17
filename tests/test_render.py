@@ -253,6 +253,24 @@ def main(update=False):
     print(f"{'PASS' if good else 'FAIL'}  3D fixtures: visible {rep[0]['visible']}, hidden behind Column L1 {not rep[1]['visible']}, "
           f"lit reflector pixels {lit_b}, pool on the floor {pool[0] < -10}, section {os.path.basename(pp)}")
     ok &= good
+
+    # 14. photos: detected, light brightens a dark surface, evening dims the photo
+    from glowpoint import features as _F
+    from glowpoint.render import is_photo
+    rng = np.random.default_rng(1)
+    dark = (rng.integers(40, 110, (200, 300, 3))).astype(np.uint8)          # a dark, textured "photo"
+    white = np.full((200, 300, 3), 250, np.uint8)
+    cv_ = _F.Canvas(None, dark); cv_.photo = True
+    mask = np.zeros((200, 300), bool); mask[50:150, 100:200] = True
+    cv_.glow(mask, np.full((200, 300), 0.8, np.float32))
+    a = cv_.finish().astype(int); b = cv_.finish(dim=0.5).astype(int)
+    lit, unlit = a[80:120, 130:170].mean(), a[:30, :60].mean()
+    good = (is_photo(dark) and not is_photo(white) and lit > dark[80:120, 130:170].mean() + 30
+            and abs(unlit - dark[:30, :60].mean()) < 1 and b[:30, :60].mean() < 0.6 * dark[:30, :60].mean()
+            and np.corrcoef(a[80:120, 130:170, 1].ravel(), dark[80:120, 130:170, 1].ravel())[0, 1] > 0.9)
+    print(f"{'PASS' if good else 'FAIL'}  photos: detected {is_photo(dark)}, drawing {not is_photo(white)}, "
+          f"lit {lit:.0f} vs {dark[80:120, 130:170].mean():.0f}, texture kept, evening dims")
+    ok &= good
     return ok
 
 

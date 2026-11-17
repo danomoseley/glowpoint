@@ -3,6 +3,10 @@
 Newest first. Each version says what a user or an agent will notice. The version is in
 `glowpoint/__init__.py`, and `python3 -m glowpoint.doctor` prints it.
 
+## 0.16.0 — 2026-11-17
+- Photos: glowpoint finds out by itself that the image is a photo, and the light brightens the surfaces and keeps their colour and texture (pools and beams go through the light layer, coves too). Design keys `background`, `photo_dim` (an evening view), `photo_strength`. README "Photos", AGENTS task.
+- Calibration: a vanishing point that is the same as one already found (a few lines off) is no longer counted again. PNG outputs create their folder.
+
 ## 0.15.1 — 2026-11-12
 - `fixture3d`: an up light that is not aimed onto a part lights the ceiling with a radius from its beam and the distance to the ceiling. Example `reflector-pendant-uplight` (uplight under the reflector and a second one on top).
 

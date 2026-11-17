@@ -796,6 +796,22 @@ Expressions run in a restricted Python evaluator with only these names (and Pyth
 
 `visible_faces()` always means visible in the drawing's own camera, also when you render another view. Thus a design is the same in all views.
 
+### Photos
+
+The image can also be a **photo** of a space. Calibration, the model, lighting, plans, and 3D fixtures work the same; the photo is `drawing.jpg` (or `.png`) in the project. glowpoint finds out by itself that the image is a photo (much dark or coloured area), and then adds light so that it **brightens** the surfaces and keeps their colour and texture, instead of tinting a white drawing.
+
+| Design key | Default | Meaning |
+|---|---|---|
+| `background` | `auto` | `photo` or `drawing`, to choose the blend yourself |
+| `photo_dim` | 0 | Darken the photo first, 0 to 1 (for example 0.5): an evening view, so the added light shows. A daylight photo hides added light, as it would in real life |
+| `photo_strength` | 0.7 | How much the light brightens the photo |
+
+Notes for photos:
+- A photo often has many straight lines (ceiling boards, tile joints, window frames), so calibration works well. Clutter (furniture, plants, textures) gives extra lines; check the calibration overlay.
+- Phone and wide-angle photos bend straight lines near the edges. Lines near the middle are the most reliable; strongly bent photos need a correction first.
+- Scale needs a real dimension, as with a drawing: a ceiling height, a door, or a known object. The camera height of a handheld photo is usually 4.5 to 5.5 ft, but do not trust that for the final scale.
+- Furniture that is not modelled does not stop light: a pool falls on the floor "through" a sofa. Model the objects that lights refer to or fall on.
+
 ### Plans: reflected ceiling plan and floor plan
 
 ```bash

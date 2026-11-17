@@ -25,6 +25,9 @@ def _add(m, s):
 
 def _blend(img, mask, col, g):
     g = np.broadcast_to(g, mask.shape)
+    cv = _F.CURRENT
+    if cv is not None and cv.photo and tuple(col) == tuple(_F.GLOW):     # on a photo, light also brightens
+        cv.glow(mask, np.asarray(g, np.float32))
     for ch, val in enumerate(col):
         img[..., ch][mask] = (img[..., ch][mask]*(1-g[mask]) + val*g[mask]).astype(np.uint8)
 

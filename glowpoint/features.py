@@ -40,11 +40,17 @@ def as_list(v):
     return list(v) if isinstance(v, (list, tuple)) else [v]
 
 
+CURRENT = None   # the canvas being drawn (architecture types add their light to it on a photo)
+
+
 class Canvas:
     def __init__(self, model, base):
         self.m = model
         self.img = base.copy()        # linework and outlines
         self.over = base.copy()       # light, blended in at the end
+        self.alpha = np.zeros(base.shape[:2], np.float32)        # how much light each pixel gets (0..1)
+        self.lcol = np.zeros(base.shape, np.float32)             # the colour of that light
+        self.photo = False            # True: the background is a photo, so light brightens it (see finish)
         self.report = []
         self.fixtures = {}
 
@@ -65,6 +71,23 @@ class Canvas:
         k = mask & (g > 0.03)
         for ch, val in enumerate(col):
             self.over[..., ch][k] = (self.over[..., ch][k]*(1-g[k]) + val*g[k]).astype(np.uint8)
+            self.lcol[..., ch][k] = self.lcol[..., ch][k]*(1-g[k]) + val*g[k]
+        self.alpha[k] = 1 - (1 - self.alpha[k]) * (1 - g[k])
+
+    def paint(self, poly, col, a, soft=False):
+        """Fill a polygon with light: blended into the drawing, or (on a photo) added as light that brightens.
+        soft: the light fades toward the edge of the polygon (pools)."""
+        poly = np.int32(poly)
+        if not self.photo:
+            pim = self.img.copy(); cv2.fillPoly(pim, [poly], col, cv2.LINE_AA)
+            self.img[:] = cv2.addWeighted(pim, a, self.img, 1 - a, 0); return
+        mask = np.zeros(self.alpha.shape, np.uint8); cv2.fillPoly(mask, [poly], 1)
+        if not mask.any(): return
+        if soft:
+            dt = cv2.distanceTransform(mask, cv2.DIST_L2, 5); g = np.clip(dt / max(dt.max() * 0.7, 1e-6), 0, 1) * a
+        else:
+            g = mask.astype(np.float32) * a
+        self.glow(mask.astype(bool), g, col)
 
     def seg(self, A, B, th=1, n=200):
         pts = [list(np.array(A)+(np.array(B)-np.array(A))*s) for s in np.linspace(0, 1, n)]
@@ -80,9 +103,23 @@ class Canvas:
         self.report.append(dict(layer=f.get("layer", ""), type=kind, surface=plane,
                                 x=round(P[0], 2), y=round(P[1], 2), z=round(P[2], 2), **extra))
 
-    def finish(self):
+    def finish(self, strength=0.7, dim=0.0):
         res = cv2.addWeighted(self.over, 0.55, self.img, 0.45, 0)
-        return np.minimum(res, self.img)
+        res = np.minimum(res, self.img)
+        if not self.photo:
+            return res
+        if dim > 0:                                                # evening: darken the photo, then add the light
+            res = (res.astype(np.float32) * (1 - dim)).astype(np.uint8)
+        # on a photo, light brightens the surface like real light: screen the light colour onto it
+        H, W = self.alpha.shape; k = int(max(3, 0.006 * max(H, W))) | 1
+        a = cv2.GaussianBlur(self.alpha, (k, k), 0)                # soft edges, like real light
+        lc = cv2.GaussianBlur(self.lcol * self.alpha[..., None], (k, k), 0) / np.maximum(a, 1e-3)[..., None]
+        lc = 0.7 * lc + 0.3 * 255.0                                # a little less saturated than on a drawing
+        light = (a[..., None] * lc / 255.0 * strength).clip(0, 1)
+        # light makes the surface brighter and keeps its colour and texture (multiply), with a small added part
+        # so that light still shows on very dark surfaces
+        out = res.astype(np.float32) * (1 + 1.8 * light) + 45 * light
+        return out.clip(0, 255).astype(np.uint8)
 
 
 # ---------------------------------------------------------------- ceiling geometry
@@ -193,12 +230,9 @@ def downlight(cv, f):
         img = cv.img
         if f.get("cone", True):
             hull = cv2.convexHull(np.float32(np.vstack([pt, pp]))).astype(np.int32)
-            cone = img.copy(); cv2.fillPoly(cone, [hull], BEAM, cv2.LINE_AA)
-            img[:] = cv2.addWeighted(cone, 0.35, img, 0.65, 0)
+            cv.paint(hull, BEAM, 0.35 if not cv.photo else 0.15)
         if cv.visible(pool, pp).mean() > 0.6:
-            a = f.get("pool_a", 0.5)
-            pim = img.copy(); cv2.fillPoly(pim, [np.int32(pp)], GLOW, cv2.LINE_AA)
-            img[:] = cv2.addWeighted(pim, a, img, 1-a, 0)
+            cv.paint(pp, GLOW, f.get("pool_a", 0.5), soft=True)
         cv2.fillPoly(cv.over, [np.int32(pt)], (40, 200, 255), cv2.LINE_AA)
         cv2.polylines(img, [np.int32(pt)], True, (0, 0, 0), 1, cv2.LINE_AA)
         cv.add(f, "downlight", f["plane"], c, visible=True)
@@ -297,8 +331,7 @@ def pendant(cv, f):
             ty = f.get("beam_to", 0.0)
             pool = [[x+pr*np.cos(t), ty, z+pr*np.sin(t)] for t in th]; pp = m.project(pool)
             if cv.visible(pool, pp).mean() > 0.6:
-                pim = cv.img.copy(); cv2.fillPoly(pim, [np.int32(pp)], GLOW, cv2.LINE_AA)
-                cv.img[:] = cv2.addWeighted(pim, 0.35, cv.img, 0.65, 0)
+                cv.paint(pp, GLOW, 0.35 if not cv.photo else 0.6, soft=True)
         cv.seg(top, [x, y + hgt, z], 1)
         hull = cv2.convexHull(np.float32(sp)).astype(np.int32)
         cv2.fillPoly(cv.img, [hull], (255, 255, 255), cv2.LINE_AA)
