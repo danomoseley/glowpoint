@@ -354,6 +354,31 @@ def main(update=False):
     print(f"{'PASS' if good else 'FAIL'}  hip, vault, polygon: faces {names[1:5]}, ray hits within {max(errs):.4f} ft, "
           f"downlights at {hy}, vault crown {_hh(vl, 0, 5):.2f} and springing {_hh(vl, 10, 5):.2f}")
     ok &= good
+
+    # 17. several views: place a second camera from model corners, render the design on it, plan markers
+    from glowpoint import views as _V
+    mvp = os.path.join(os.path.dirname(proj), "views"); shutil.rmtree(mvp, ignore_errors=True)
+    shutil.copytree(os.path.join(ROOT, "tests", "fixtures", "lobby"), mvp)
+    true = {"f": 720, "principal": [525, 350], "position": [10, 5.5, 15], "yaw": -25, "pitch": 6, "roll": 1.5}
+    render(mvp, linework=True, camera=true, out_name="truth.png")
+    photo = os.path.join(os.path.dirname(proj), "side.png")
+    _cv2.imwrite(photo, _cv2.imread(os.path.join(mvp, "out", "truth.png")))      # an unmarked copy: the "photo"
+    mt = _Mh(mvp); mt.set_camera(true)
+    cs = [c for c in _V.corners(mvp) if c[0].startswith(("Column", "Desk"))]
+    Pc = np.array([c[1:] for c in cs]); pxc = mt.project(Pc); dpc = mt.depth(Pc)
+    inside = np.nonzero((dpc > 0) & (pxc[:, 0] > 5) & (pxc[:, 0] < 1045) & (pxc[:, 1] > 5) & (pxc[:, 1] < 695))[0][:10]
+    rng = np.random.default_rng(3)
+    pts = [(pxc[i, 0] + rng.normal(0, 0.7), pxc[i, 1] + rng.normal(0, 0.7), *Pc[i]) for i in inside]
+    cam_v, err_v = _V.add(mvp, "side", photo, pts)
+    dpos = float(np.linalg.norm(np.array(cam_v["position"]) - true["position"]))
+    dang = max(abs(cam_v[k] - true[k]) for k in ("yaw", "pitch", "roll")); df = abs(cam_v["f"] - true["f"]) / true["f"]
+    rep_v = render(mvp, view="side", check=True)
+    files = all(os.path.exists(os.path.join(mvp, "out", n)) for n in ("concept_side.png", "check_side.png", "positions_side.csv"))
+    pv = plan(mvp, rcp=True)
+    good = (dpos < 0.2 and dang < 0.3 and df < 0.01 and err_v < 2 and len(rep_v) == 29 and files and _cv2.imread(pv) is not None)
+    print(f"{'PASS' if good else 'FAIL'}  several views: camera from {len(pts)} corners, position off {dpos:.3f} ft, "
+          f"angles off {dang:.2f} deg, lens off {df*100:.2f}%, error {err_v:.2f} px; design on the view: {len(rep_v)} items, files {files}")
+    ok &= good
     return ok
 
 

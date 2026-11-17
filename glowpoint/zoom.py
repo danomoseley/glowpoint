@@ -26,10 +26,10 @@ def nice_step(span_px):
     return 1000
 
 
-def model_edges(img, project):
-    """The image with the model's surface edges drawn in red, using the camera in model.json."""
+def model_edges(img, project, view=None):
+    """The image with the model's surface edges drawn in red, using the camera in model.json (or of a view)."""
     from .model import Model
-    m = Model(project); ids = m.raycast(img.shape[:2])[0]
+    m = Model(project, view); ids = m.raycast(img.shape[:2])[0]
     e = np.zeros(ids.shape, bool)
     e[:, 1:] |= ids[:, 1:] != ids[:, :-1]; e[1:, :] |= ids[1:, :] != ids[:-1, :]
     out = img.copy(); out[e] = (0, 0, 255)
@@ -67,12 +67,13 @@ def main():
     ap.add_argument("image"); ap.add_argument("box", nargs="*", type=float)
     ap.add_argument("--mark", action="append", default=[]); ap.add_argument("--step", type=int)
     ap.add_argument("--out"); ap.add_argument("--model", help="project folder: draw its model edges in red")
+    ap.add_argument("--view", help="with --model: the camera of this view (glowpoint.views)")
     a = ap.parse_args()
     img = cv2.imread(a.image)
     if img is None: raise SystemExit(f"cannot read {a.image}")
     if a.box and len(a.box) != 4: raise SystemExit("give the box as X0 Y0 X1 Y1")
     marks = [tuple(float(v) for v in m.split(",")) for m in a.mark]
-    if a.model: img = model_edges(img, a.model)
+    if a.model: img = model_edges(img, a.model, a.view)
     import os
     out = a.out or os.path.join(os.path.dirname(os.path.abspath(a.image)), "out", "zoom.png")
     os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)

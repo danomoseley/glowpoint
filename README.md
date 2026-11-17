@@ -840,6 +840,21 @@ Expressions run in a restricted Python evaluator with only these names (and Pyth
 
 `visible_faces()` always means visible in the drawing's own camera, also when you render another view. Thus a design is the same in all views.
 
+### Several views of one model
+
+A project can have more images of the same space (photos, drawings, or renders), each with its own camera in the same model. The design is drawn on every view, so one set of lights can be shown from several sides, and a part that one image hides can be measured in another.
+
+```bash
+python3 -m glowpoint.views corners projects/lobby            # named 3D corners of the model, to find in the new image
+python3 -m glowpoint.views add projects/lobby side side.jpg \
+    --point 412,388,-14.82,0,50.65 --point 455,120,-14.82,24.36,50.65 ...   # 6 or more: PX,PY,X,Y,Z
+python3 -W ignore -m glowpoint.render projects/lobby --view side --check    # out/check_side.png
+python3 -W ignore -m glowpoint.render projects/lobby --view side            # out/concept_side.png
+python3 -W ignore -m glowpoint.render projects/lobby --all-views            # the main drawing and every view
+```
+
+`views add` copies the image into the project (`view_<name>.jpg`), finds the camera (and its lens, from 6 or more points that are not all on one plane; with fewer, give `--f`), and stores it in `model.json` under `"views"`, with the points and the error in pixels. An average error under about 3 px is good; a larger one means that a pixel does not match its 3D point. Good points are corners that the model already has: room corners, column corners, the corners of a desk. Read their pixels in the new image with `glowpoint.zoom`. `measure`, `zoom --model`, and `render` take `--view NAME`. In design.json, `visible_faces()` still means visible in the main drawing, so the design is the same in every view. The plans show where each view's camera stands. `views list` lists the views.
+
 ### Photos
 
 The image can also be a **photo** of a space. Calibration, the model, lighting, plans, and 3D fixtures work the same; the photo is `drawing.jpg` (or `.png`) in the project. glowpoint finds out by itself that the image is a photo (much dark or coloured area), and then adds light so that it **brightens** the surfaces and keeps their colour and texture, instead of tinting a white drawing.

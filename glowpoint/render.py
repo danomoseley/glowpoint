@@ -125,8 +125,11 @@ LAST = {}   # after render(): the model, the evaluated features, and the report 
 
 
 def render(project, check=False, out_name="concept.png", design_file="design.json", camera=None, linework=False,
-           size=None, write=True):
+           size=None, write=True, view=None):
     m = Model(project)
+    if view and view != "main":
+        if out_name == "concept.png": out_name = f"concept_{view}.png"
+        vm = Model(project, view)                     # its image and camera; the model is the same
     dpath = os.path.join(project, design_file)
     if os.path.exists(dpath):
         design = json.load(open(dpath))
@@ -139,7 +142,17 @@ def render(project, check=False, out_name="concept.png", design_file="design.jso
     if has_drawing and pngmark.is_marked(m.drawing):
         raise ValueError(f"{m.drawing} is an image that glowpoint made (it already has lights or coffers drawn on it). "
                          "Use the architect's original drawing as drawing.png. Outputs are in out/.")
-    base = None if (camera or linework or not has_drawing) else cv2.imread(m.drawing)
+    if view and view != "main":
+        vimg = vm.drawing
+        if pngmark.is_marked(vimg): raise ValueError(f"{vimg} is an image that glowpoint made: use the original")
+        base = None if (camera or linework or not os.path.exists(vimg)) else cv2.imread(vimg)
+        if base is None and not (camera or linework):
+            raise FileNotFoundError(f"{vimg} not found (the image of view {view})")
+        if not camera:
+            camera = vm.raw["views"][view]["camera"]
+            if base is not None: size = (base.shape[0], base.shape[1])
+    else:
+        base = None if (camera or linework or not has_drawing) else cv2.imread(m.drawing)
     if base is None and not (camera or linework):
         raise FileNotFoundError(f"{m.drawing} not found. Add the drawing, or use --linework to draw the model.")
     # "visible" in the design always means visible in the architect's drawing, whatever view is rendered
@@ -153,6 +166,7 @@ def render(project, check=False, out_name="concept.png", design_file="design.jso
     os.makedirs(os.path.join(project, "out"), exist_ok=True)
     stem = os.path.splitext(out_name)[0]
     suffix = "" if out_name == "concept.png" else "_" + stem       # each view keeps its own check and positions files
+    if view and view != "main" and out_name == f"concept_{view}.png": suffix = "_" + view
     if check:
         pngmark.write(os.path.join(project, "out", f"check{suffix}.png"), check_image(m, base))
 
@@ -240,7 +254,18 @@ if __name__ == "__main__":
     ap.add_argument("--camera", help="JSON file with a camera, for a new view (path from the current folder). "
                     "Outputs are named after --out: check_<out>.png, positions_<out>.csv")
     ap.add_argument("--linework", action="store_true", help="draw the model as linework, not on the drawing")
+    ap.add_argument("--view", help="render on another view of the model (glowpoint.views): its image and camera")
+    ap.add_argument("--all-views", action="store_true", help="render the main drawing and every view")
     a = ap.parse_args()
     cam = json.load(open(a.camera)) if a.camera else None
-    rep = render(a.project, a.check, a.out, a.design, cam, a.linework)
-    print(f"{len(rep)} items -> {os.path.join(a.project, 'out', a.out)}")
+    views = [a.view] if a.view else [None]
+    if a.all_views:
+        views = [None] + sorted(json.load(open(os.path.join(a.project, "model.json"))).get("views", {}))
+    for v in views:
+        out = a.out if not v else (f"concept_{v}.png" if a.out == "concept.png" else a.out)
+        try:
+            rep = render(a.project, a.check, out, a.design, cam, a.linework, view=v)
+        except FileNotFoundError as e:
+            if not a.all_views: raise
+            print(f"skipped {'view ' + v if v else 'the main drawing'}: {e}"); continue
+        print(f"{len(rep)} items -> {os.path.join(a.project, 'out', out)}" + (f"  (view {v})" if v else ""))

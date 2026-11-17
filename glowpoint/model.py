@@ -145,7 +145,8 @@ def hit_surface(s, C, d):
             kk = AX[key]; ins &= (Q[..., kk] > lo) & (Q[..., kk] < hi)
         ok &= ~ins
     t = np.where(ok, t, np.inf)
-    return t, C + t[..., None] * d
+    with np.errstate(invalid="ignore"):
+        return t, C + t[..., None] * d
 
 
 def expand_surface(s):
@@ -241,13 +242,19 @@ class Box:
 
 
 class Model:
-    def __init__(self, project_dir):
+    def __init__(self, project_dir, view=None):
         self.dir = project_dir
         d = json.load(open(os.path.join(project_dir, "model.json")))
         self.raw = d
         self.drawing = os.path.join(project_dir, d["drawing"])
         self.set_camera(d["camera"])
         self.C_drawing = self.C.copy()        # the drawing's eye: the room is on this side of every wall
+        self.view = None
+        if view and view != "main":           # another view of the same model: its own image and camera
+            vs = d.get("views", {})
+            if view not in vs: raise KeyError(f"No view named '{view}'. Known: {['main'] + sorted(vs)}")
+            self.view = view; self.main_drawing = self.drawing
+            self.drawing = os.path.join(project_dir, vs[view]["drawing"]); self.set_camera(vs[view]["camera"])
         self.surfaces = []
         for s in d["surfaces"]:
             s = dict(s)

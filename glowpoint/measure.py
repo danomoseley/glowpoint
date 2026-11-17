@@ -30,9 +30,9 @@ from .model import Model, rotation
 
 
 class Cam:
-    def __init__(self, src):
+    def __init__(self, src, view=None):
         if os.path.isdir(src):
-            m = Model(src); self.C, self.R, self.f, self.cx, self.cy = m.C, m.R, m.f, m.cx, m.cy
+            m = Model(src, view); self.C, self.R, self.f, self.cx, self.cy = m.C, m.R, m.f, m.cx, m.cy
         else:
             c = json.load(open(src))
             if "vp" in c: self.C, self.R, (self.cx, self.cy) = np.array([0, c["eye_height"], 0.]), np.eye(3), c["vp"]
@@ -64,8 +64,9 @@ def main(argv=None):
     ap.add_argument("--depth", type=float, help="box with 2 corners: size of the hidden side, ft")
     ap.add_argument("--toward", choices=["wall", "camera"], default="wall")
     ap.add_argument("--snap", help="box: move the nearest side onto this wall (project folder only)")
+    ap.add_argument("--view", help="use the camera of this view (glowpoint.views); pixels are in that view's image")
     a = ap.parse_args(argv)
-    cam = Cam(a.source); v = a.values
+    cam = Cam(a.source, a.view); v = a.values
     num = lambda i: float(v[i])
     if a.command == "floor":
         P = cam.on_plane(num(0), num(1), "Y", 0.0); print(f"X {P[0]:.2f}  Z {P[2]:.2f}  ft (floor)")
@@ -77,7 +78,7 @@ def main(argv=None):
     elif a.command == "on":
         if len(v) != 3: ap.error('on needs: X Y "Surface name", for example 900 300 "Ceiling slope"')
         from glowpoint.model import Model, hit_surface
-        m = Model(a.source); srf = m.surface(v[2]); d = cam.ray(num(0), num(1)); C = cam.C
+        m = Model(a.source, a.view); srf = m.surface(v[2]); d = cam.ray(num(0), num(1)); C = cam.C
         srf_open = {k_: v_ for k_, v_ in srf.items() if k_ not in ("holes",)}
         t = float(hit_surface(srf_open, C, d[None, :])[0][0])
         if not np.isfinite(t):                     # outside its edges: intersect the infinite surface instead

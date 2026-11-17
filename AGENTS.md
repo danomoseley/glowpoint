@@ -109,6 +109,8 @@ Send the picture `docs/menu.png` (one labelled example of each type) with this l
 >
 > **Plans:** a reflected ceiling plan and a floor plan of the same design, to scale, with a symbol and a legend for every light.
 >
+> **More views:** send more photos or drawings of the same space, and I show the same design on each of them.
+>
 > **For every light:** colour temperature (for example 2700 K, 3000 K, 4000 K; diagrammatic colours, good for warm and cool options), counts and spacing tied to the architecture ("centred on the desk", "every 4 ft", "in every second coffer"), other views of the same design, design options side by side, and a legend.
 >
 > **Plugins: things you can add.** If you need something that is not on this list, I can write a plugin, a small file in your project, without changing glowpoint:
@@ -198,6 +200,10 @@ Set it up like a drawing (Task: set up a new image), with these differences: ask
 ### Task: a sloped, hip, vaulted, or polygon ceiling
 
 Model the ceiling first (see the README, "Sloped ceilings" and the parts after it): a one-direction slope is a surface with `"axis": "slope"`; a hip or gable ceiling is one entry with `"axis": "hip"` or `"gable"` (it makes the faces; use their names, for example `Hip left`); a barrel vault is `"axis": "vault"`; an L-shaped or angled ceiling is a level surface with an `"outline"`. Measure the edges, and check points with `measure <project> on X Y "<name>"`. Place lights with `x` and `z`, like on a level ceiling. Coffers, coves, light wells, and slats (with `"drop"`) work on slopes and hip faces, not yet on vaults; say so if the user asks.
+
+### Task: more views of the same space
+
+When the user sends another photo, drawing, or render of a space that already has a model, add it as a view; do not start a new project. Run `python3 -m glowpoint.views corners local/<project>` for the model's corners, find 6 or more of them in the new image with `glowpoint.zoom` (corners of the room, columns, and furniture; not all on one wall), and run `python3 -m glowpoint.views add local/<project> <name> <image> --point PX,PY,X,Y,Z ...`. If the error is above about 3 px, check the points. Then send `render --view <name> --check` and ask the same short question as for the main model (Part B). After that, render the design on the view (`--view <name>`), or on all views (`--all-views`), and send the images. A part that the main image hides can be measured in a view: `measure <project> ... --view <name>`.
 
 ### Task: plans
 

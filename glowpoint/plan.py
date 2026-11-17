@@ -301,20 +301,17 @@ def draw_light_feature(sh, m, fe, rows, col):
         sh.text(fe.get("pattern", "pattern"), x - w / 2 + .3, z - d / 2 + .5, 0.38, col)
 
 
-def viewer(sh, m, z_min):
-    """Where the drawing's viewer stands, and which way they look."""
-    C = m.C_drawing; R = getattr(m, "R", None)
+def viewer(sh, m, z_min, C=None, R=None, label="VIEWER"):
+    """Where a viewer (the drawing's, or a view's camera) stands, and which way they look."""
+    C = m.C_drawing if C is None else C; R = m.R if R is None else R
     x, z = float(C[0]), float(C[2])
-    try:
-        fwd = m.R[2] if R is not None else np.array([0, 0, 1.0])
-    except Exception:
-        fwd = np.array([0, 0, 1.0])
+    fwd = R[2]
     d = np.array([fwd[0], fwd[2]]); n = np.linalg.norm(d); d = d / n if n > 1e-6 else np.array([0, 1.0])
-    p = sh.p(x, max(z, z_min - 1e9))
+    p = sh.p(x, z)
     tip = (int(p[0] + d[0] * 40), int(p[1] - d[1] * 40))
     cv2.circle(sh.img, p, 6, INK, -1, cv2.LINE_AA)
     cv2.arrowedLine(sh.img, p, tip, INK, 2, cv2.LINE_AA, tipLength=0.3)
-    sh.text("VIEWER", 0, px=(p[0] + 10, p[1] + 18), size=0.4, col=INK)
+    sh.text(label, 0, px=(p[0] + 10, p[1] + 18), size=0.4, col=INK)
 
 
 def scale_bar(sh):
@@ -367,6 +364,8 @@ def plan(project, rcp=False, show_all=False, design_file="design.json", out=None
         cv2.rectangle(sh.img, (px - 3, py - th - 3), (px + tw + 3, py + 4), PAPER, -1)
         sh.text(label, 0, px=(px, py), size=0.42, col=GREY)
     viewer(sh, m_arch, z0)
+    for vname in sorted(m_arch.raw.get("views", {})):        # the other views of the model
+        vm = Model(project, vname); viewer(sh, m_arch, z0, vm.C, vm.R, f"VIEW {vname.upper()}")
     scale_bar(sh)
     kind = "REFLECTED CEILING PLAN" if rcp else "FLOOR PLAN"
     sh.text((title or design.get("title") or "LIGHTING CONCEPT").upper() + "  -  " + kind, 0, px=(sh.m, 34), size=0.75, w=2)

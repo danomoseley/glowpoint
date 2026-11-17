@@ -3,6 +3,9 @@
 Newest first. Each version says what a user or an agent will notice. The version is in
 `glowpoint/__init__.py`, and `python3 -m glowpoint.doctor` prints it.
 
+## 0.19.0 — 2026-11-17
+- Several views of one model: `glowpoint.views` (corners, add, list) places the camera of another photo, drawing, or render from 6 or more model corners (lens included), and stores it in model.json. `render --view NAME`, `--all-views`; `measure` and `zoom --model` take `--view`. Plans show each view's camera.
+
 ## 0.18.0 — 2026-11-17
 - Coffers, recessed and perimeter coves, light wells, and slats on sloped ceilings, built in the slope (depth perpendicular, sizes along the slope). Slats take `drop`.
 - Hip and gable ceilings (`"axis": "hip"` / `"gable"` make the faces), barrel vaults (`"axis": "vault"`), and polygon outlines for any surface. Lights, plans, measure, and track work on them.
