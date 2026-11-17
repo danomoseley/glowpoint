@@ -838,6 +838,8 @@ Expressions run in a restricted Python evaluator with only these names (and Pyth
 - **check.png** (with `--check`) — every surface tinted and named, with a 4 ft grid. If the grid follows the lines of the drawing, the model is correct.
 - **positions.csv** — one row for each light: layer, type, surface, X/Y/Z (ft), and `visible`. Use it to check the design and to give positions to others. `visible` is about the fixture point itself: an uplight hidden behind a bench is `False`, although the column face that it lights can be in view.
 
+Line drawings (`--linework`, and views without an image) are unshaded: white surfaces and black edges, with no floor grid. In design.json, `"linework": {"shade": true, "grid": 4}` adds light grey tones per surface direction and a floor grid every 4 ft.
+
 `visible_faces()` always means visible in the drawing's own camera, also when you render another view. Thus a design is the same in all views.
 
 ### Several views of one model

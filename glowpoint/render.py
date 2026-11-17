@@ -162,7 +162,8 @@ def render(project, check=False, out_name="concept.png", design_file="design.jso
         m.set_camera(camera)
     if base is None:
         shape = tuple(size) if size else ref_shape
-        base = LW.draw(m, shape)
+        lw = design.get("linework", {})        # a line drawing: unshaded and without a grid, unless asked
+        base = LW.draw(m, shape, floor_grid=lw.get("grid", 0), shade=lw.get("shade", False))
     os.makedirs(os.path.join(project, "out"), exist_ok=True)
     stem = os.path.splitext(out_name)[0]
     suffix = "" if out_name == "concept.png" else "_" + stem       # each view keeps its own check and positions files
