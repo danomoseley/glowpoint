@@ -110,7 +110,7 @@ def to_pixels(v, c, scale):
     """Finite vanishing point in pixels, or None if it is (practically) at infinity."""
     if abs(v[2]) < 1e-9: return None
     p = v[:2]/v[2]
-    if np.linalg.norm(p) > 30: return None                  # more than 30 image widths away
+    if np.linalg.norm(p) > 10: return None                  # more than 10 image widths away: unstable, treat as infinite
     return p*scale + c
 
 
@@ -191,6 +191,16 @@ def scale_from_known(cam, known):
     a, b, c_ = np.dot(d2, d2), np.dot(d2, u), np.dot(u, u); d_, e = np.dot(d2, w0), np.dot(u, w0)
     s = (a*e - b*d_)/(a*c_ - b*b)
     return Hft/s
+
+
+def calibrate_image(path, f=None, tol=1.0):
+    """Lens and turn of an image from its lines: dict with f, principal, yaw, pitch, roll (no scale or position)."""
+    img = cv2.imread(path); gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    S = segments(gray); vps, c, scale = find_vps(S, gray.shape, tol=tol)
+    cam, R = solve_camera(vps, c, scale, f)
+    if R is None:
+        raise ValueError("this image's lines do not give its lens (a one-point view): give --f")
+    return cam
 
 
 def main():

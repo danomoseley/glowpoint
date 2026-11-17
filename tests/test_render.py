@@ -376,8 +376,21 @@ def main(update=False):
     files = all(os.path.exists(os.path.join(mvp, "out", n)) for n in ("concept_side.png", "check_side.png", "positions_side.csv"))
     pv = plan(mvp, rcp=True)
     good = (dpos < 0.2 and dang < 0.3 and df < 0.01 and err_v < 2 and len(rep_v) == 29 and files and _cv2.imread(pv) is not None)
+    # the same view from lines only (post edges and wall tops), as for a photo with few shared corners
+    lns = []
+    for (X, Z) in ((-14.818, 50.645), (-8.322, 50.645), (-8.322, 57.14)):           # Column L1 vertical edges
+        a3, b3 = np.array([X, 2.0, Z]), np.array([X, 18.0, Z]); pa, pb = mt.project([a3, b3])
+        lns.append((*pa, *pb, *a3, *b3))
+    for (X, Y) in ((-25.373, 20.81), (38.567, 24.358)):                              # edges along Z at known X, Y
+        a3, b3 = np.array([X, Y, 30.0]), np.array([X, Y, 60.0]); pa, pb = mt.project([a3, b3])
+        if np.all(np.isfinite([*pa, *pb])) and mt.depth([a3])[0] > 0: lns.append((*pa, *pb, *a3, *b3))
+    cam_l, err_l = _V.solve_lines([], lns, (1050, 700), {"f": 700, "yaw": -20, "pitch": 5, "roll": 0}, None,
+                                  ((-25, 38), (5, 110)))
+    dpos_l = float(np.linalg.norm(np.array(cam_l["position"]) - true["position"]))
+    good &= dpos_l < 0.3 and abs(cam_l["yaw"] - true["yaw"]) < 0.5
     print(f"{'PASS' if good else 'FAIL'}  several views: camera from {len(pts)} corners, position off {dpos:.3f} ft, "
-          f"angles off {dang:.2f} deg, lens off {df*100:.2f}%, error {err_v:.2f} px; design on the view: {len(rep_v)} items, files {files}")
+          f"angles off {dang:.2f} deg, lens off {df*100:.2f}%, error {err_v:.2f} px; from {len(lns)} lines: position off {dpos_l:.3f} ft; "
+          f"design on the view: {len(rep_v)} items, files {files}")
     ok &= good
     return ok
 

@@ -853,6 +853,16 @@ python3 -W ignore -m glowpoint.render projects/lobby --view side            # ou
 python3 -W ignore -m glowpoint.render projects/lobby --all-views            # the main drawing and every view
 ```
 
+**Lines instead of corners.** A second photo often shares few corners with the model (it looks the other way, and furniture hides the floor). Then give **lines**: an image line and the model edge that it shows, for example a post edge, the top of a wall, or the edge of a beam. The two pixels can be anywhere on the image line, and the two 3D points anywhere on the model edge:
+
+```bash
+python3 -m glowpoint.views add local/porch end end.jpg \
+    --line 1250,525,1650,314,-2.62,7.3,0,-2.62,7.3,10 \
+    --line 1470,700,1452,1100,-2.62,0,8.18,-2.62,6,8.18 ...    # PX1,PY1,PX2,PY2,X1,Y1,Z1,X2,Y2,Z2
+```
+
+With lines, or with fewer than 6 points, `views add` first calibrates the new image from its own lines (lens and tilt), then fits the camera to the points and lines. Give at least two lines along the room (they fix the height and the side position) and two or more vertical edges at known positions (they fix the distance). If the camera comes out in an impossible place (behind a wall), a line is matched to the wrong model edge: for example a post that the main image does not show. The check image of the view shows it.
+
 `views add` copies the image into the project (`view_<name>.jpg`), finds the camera (and its lens, from 6 or more points that are not all on one plane; with fewer, give `--f`), and stores it in `model.json` under `"views"`, with the points and the error in pixels. An average error under about 3 px is good; a larger one means that a pixel does not match its 3D point. Good points are corners that the model already has: room corners, column corners, the corners of a desk. Read their pixels in the new image with `glowpoint.zoom`. `measure`, `zoom --model`, and `render` take `--view NAME`. In design.json, `visible_faces()` still means visible in the main drawing, so the design is the same in every view. The plans show where each view's camera stands. `views list` lists the views.
 
 ### Photos

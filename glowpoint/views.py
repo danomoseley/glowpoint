@@ -113,7 +113,56 @@ def solve(points, size, f=None):
     return cam, e
 
 
-def add(project, name, image, points, f=None):
+def solve_lines(points, lines, size, start, f=None, bounds=None):
+    """Camera from points and lines, by least squares. A line is (px1, py1, px2, py2, X1, Y1, Z1, X2, Y2, Z2): two
+    pixels on an image line, and two 3D points on the model edge that it shows (the pixels need not be those
+    points). start: a camera from calibrate on this image (lens and tilt); its turn is tried in four directions
+    and from several positions in the model. bounds: (X range, Z range) to try positions in."""
+    from scipy.optimize import least_squares
+    from glowpoint.model import rotation
+    W, H = size; cx, cy = W / 2.0, H / 2.0
+    pts = np.asarray(points, float).reshape(-1, 5); lns = np.asarray(lines, float).reshape(-1, 10)
+    free_f = f is None; f0 = float(f or start["f"])
+
+    def proj(params, P):
+        X, Y, Z, yaw, pitch, roll = params[:6]; fv = f0 * np.exp(params[6]) if free_f else f0   # the lens stays positive
+        R = rotation(yaw, pitch, roll); q = (np.atleast_2d(P) - [X, Y, Z]) @ R.T
+        return np.stack([cx + fv * q[:, 0] / q[:, 2], cy - fv * q[:, 1] / q[:, 2]], 1), q[:, 2]
+
+    def resid(params):
+        r = []
+        if len(pts):
+            pj, z = proj(params, pts[:, 2:]); r += list((pj - pts[:, :2]).ravel()); r += list(np.minimum(z, 0) * 1e3)
+        for L in lns:
+            A, B = L[4:7], L[7:10]
+            pj, z = proj(params, [A, B, (A + B) / 2])
+            a, b = pj[0], pj[1]; n = np.array([b[1] - a[1], a[0] - b[0]]); nn = np.linalg.norm(n) + 1e-9
+            for px in (L[0:2], L[2:4]): r.append(float((px - a) @ n / nn))
+            r += list(np.minimum(z, 0) * 1e3)
+        return np.array(r)
+
+    (xa, xb), (za, zb) = bounds
+    best = None
+    for turn in (0, 90, 180, 270):
+        for X in np.linspace(xa, xb, 3):
+            for Z in np.linspace(za, zb, 5):
+                x0 = [X, 5.0, Z, start["yaw"] + turn, start["pitch"], start["roll"]] + ([0.0] if free_f else [])
+                try:
+                    r = least_squares(resid, x0, method="lm" if len(resid(x0)) >= len(x0) else "trf")
+                except Exception:
+                    continue
+                if best is None or r.cost < best.cost: best = r
+    if best is None: raise ValueError("no camera fits these points and lines")
+    X, Y, Z, yaw, pitch, roll = best.x[:6]; fv = f0 * np.exp(best.x[6]) if free_f else f0
+    yaw = (yaw + 180) % 360 - 180
+    cam = {"f": round(float(fv), 2), "principal": [round(cx, 1), round(cy, 1)], "position": [round(float(v), 3) for v in (X, Y, Z)],
+           "yaw": round(float(yaw), 3), "pitch": round(float(pitch), 3), "roll": round(float(roll), 3)}
+    e = float(np.sqrt(np.mean(resid(best.x)[: 2 * len(pts) + 0] ** 2))) if len(pts) and not len(lns) else \
+        float(np.sqrt(np.mean(best.fun ** 2)))
+    return cam, e
+
+
+def add(project, name, image, points, f=None, lines=()):
     """Copy the image into the project, place its camera, and store the view in model.json."""
     if name in ("main", "concept"): raise ValueError("choose another view name")
     from glowpoint import pngmark
@@ -125,14 +174,28 @@ def add(project, name, image, points, f=None):
     fn = f"view_{name}{ext}"
     dst = os.path.join(project, fn)
     if os.path.abspath(image) != os.path.abspath(dst): shutil.copy(image, dst)
-    cam, e = solve(points, (im.shape[1], im.shape[0]), f)
+    if lines or len(points) < (4 if f else 6):
+        # start from calibrate on this image (lens and tilt), then fit the points and lines
+        from glowpoint import calibrate as CAL
+        import io, contextlib
+        with contextlib.redirect_stdout(io.StringIO()):
+            start = CAL.calibrate_image(image)
+        mm = Model(project); xs = [v for s_ in mm.surfaces if "X" in s_ for v in s_["X"]]; zs = [v for s_ in mm.surfaces if "Z" in s_ for v in s_["Z"]]
+        cam, e = solve_lines(points, lines, (im.shape[1], im.shape[0]), start, f, ((min(xs), max(xs)), (min(zs), max(zs))))
+    else:
+        cam, e = solve(points, (im.shape[1], im.shape[0]), f)
     mp = os.path.join(project, "model.json"); d = json.load(open(mp))
     d.setdefault("views", {})[name] = {"drawing": fn, "camera": cam, "points": [list(map(float, p)) for p in points],
-                                       "error_px": round(e, 2)}
+                                       "lines": [list(map(float, l)) for l in lines], "error_px": round(e, 2)}
     json.dump(d, open(mp, "w"), indent=1)
     # each point: where the new camera puts it
-    m = Model(project, view=name); pj = m.project([p[2:] for p in points])
-    worst = max(float(np.hypot(*(np.asarray(p[:2]) - q))) for p, q in zip(points, pj))
+    m = Model(project, view=name)
+    worst = 0.0
+    if len(points):
+        pj = m.project([p[2:] for p in points]); worst = max(float(np.hypot(*(np.asarray(p[:2]) - q))) for p, q in zip(points, pj))
+    for L in lines:
+        pj = m.project([L[4:7], L[7:10]]); a, b = pj; n = np.array([b[1] - a[1], a[0] - b[0]]); n /= np.linalg.norm(n) + 1e-9
+        worst = max(worst, *(abs(float((np.asarray(px) - a) @ n)) for px in (L[0:2], L[2:4])))
     print(f"view {name}: camera {cam}")
     print(f"  error {e:.2f} px on average, worst point {worst:.1f} px"
           + ("  (good)" if e < 3 else "  (check the points: a pixel may not match its 3D point)"))
@@ -144,7 +207,10 @@ def main(argv=None):
     sub = ap.add_subparsers(dest="cmd", required=True)
     c = sub.add_parser("corners"); c.add_argument("project")
     a_ = sub.add_parser("add"); a_.add_argument("project"); a_.add_argument("name"); a_.add_argument("image")
-    a_.add_argument("--point", action="append", required=True, help="PX,PY,X,Y,Z: a pixel and its 3D point (ft)")
+    a_.add_argument("--point", action="append", default=[], help="PX,PY,X,Y,Z: a pixel and its 3D point (ft)")
+    a_.add_argument("--line", action="append", default=[],
+                    help="PX1,PY1,PX2,PY2,X1,Y1,Z1,X2,Y2,Z2: two pixels on an image line, and two 3D points on the model "
+                         "edge it shows (a post edge, the top of a wall, the edge of a beam)")
     a_.add_argument("--f", type=float, help="lens in pixels, if known")
     l = sub.add_parser("list"); l.add_argument("project")
     a = ap.parse_args(argv)
@@ -152,8 +218,11 @@ def main(argv=None):
         for n, x, y, z in corners(a.project): print(f"{n:45s} X {x:8.2f}  Y {y:7.2f}  Z {z:8.2f}")
     elif a.cmd == "add":
         pts = [tuple(float(v) for v in p.split(",")) for p in a.point]
+        lns = [tuple(float(v) for v in p.split(",")) for p in a.line]
         if any(len(p) != 5 for p in pts): ap.error("each --point is PX,PY,X,Y,Z")
-        add(a.project, a.name, a.image, pts, a.f)
+        if any(len(l) != 10 for l in lns): ap.error("each --line is PX1,PY1,PX2,PY2,X1,Y1,Z1,X2,Y2,Z2")
+        if len(pts) + len(lns) < 4: ap.error("give 4 or more points and lines together")
+        add(a.project, a.name, a.image, pts, a.f, lns)
     else:
         d = json.load(open(os.path.join(a.project, "model.json")))
         print(f"main: {d['drawing']}")

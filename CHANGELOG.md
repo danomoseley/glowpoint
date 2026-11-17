@@ -3,6 +3,10 @@
 Newest first. Each version says what a user or an agent will notice. The version is in
 `glowpoint/__init__.py`, and `python3 -m glowpoint.doctor` prints it.
 
+## 0.20.0 — 2026-11-17
+- `views add --line`: place a view from model edges (post edges, wall tops, beam edges) as well as points; it calibrates the new image first and fits the camera by least squares. Tested on two real photos of one room taken from opposite ends.
+- Calibration: a vanishing point more than 10 image widths away is treated as at infinity (an almost parallel set of lines gave a wrong lens). `calibrate_image()` for other tools.
+
 ## 0.19.0 — 2026-11-17
 - Several views of one model: `glowpoint.views` (corners, add, list) places the camera of another photo, drawing, or render from 6 or more model corners (lens included), and stores it in model.json. `render --view NAME`, `--all-views`; `measure` and `zoom --model` take `--view`. Plans show each view's camera.
 
