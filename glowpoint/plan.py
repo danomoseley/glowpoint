@@ -2,9 +2,10 @@
 
   python3 -m glowpoint.plan <project> [--rcp] [--all] [--design design.json] [--out NAME.png] [--title TEXT]
 
-  (default)  floor plan: lights below 7 ft (uplights, sconces, furniture and lamp light, floor patterns)
-  --rcp      reflected ceiling plan: lights at 7 ft and above (downlights, slots, track, pendants, wallwashers,
-             coves) and the ceiling elements (coffers, coves, slats, light wells, luminous areas, ceiling heights)
+  (default)  floor plan: lights below 7 ft that are not on a ceiling (uplights, sconces, furniture and lamp
+             light, floor patterns)
+  --rcp      reflected ceiling plan: lights on or hanging from a ceiling (level or sloped), and other lights at
+             7 ft and above (downlights, slots, track, pendants, wallwashers, coves), the ceiling elements (coffers, coves, slats, light wells, luminous areas, ceiling heights)
   --all      every light, in either plan
 
 The plan is drawn straight down (orthographic), to scale, with X to the right and Z (away from the drawing's
@@ -103,9 +104,24 @@ def draw_architecture(sh, m, rcp):
                     sh.rect(h["X"], h["Z"], GREY, 1)
                 labels.append(((s["X"][0] + s["X"][1]) / 2, s["Z"][1] - 0.04 * (s["Z"][1] - s["Z"][0]),
                                f"CLG {feet_inches(s['at'])}"))
+    if rcp:                                   # sloped ceilings: outline, heights at both edges, arrow downhill
+        for s in surfs:
+            if s["axis"] != 3: continue
+            sh.rect(s["X"], s["Z"], GREY, 1)
+            k = s["k"]; (u0, y0), (u1, y1) = (s["u0"], s["y0"]), (s["u1"], s["y1"])
+            hi_u, lo_u = (u0, u1) if y0 > y1 else (u1, u0)
+            mid = (s[s["other"]][0] + s[s["other"]][1]) / 2
+            P = (lambda u, w: (u, w)) if k == 0 else (lambda u, w: (w, u))
+            a, b = sh.p(*P(hi_u + 0.2 * (lo_u - hi_u), mid)), sh.p(*P(lo_u - 0.2 * (lo_u - hi_u), mid))
+            cv2.arrowedLine(sh.img, a, b, GREY, 1, cv2.LINE_AA, tipLength=0.15)
+            labels.append((*P(hi_u + 0.1 * (lo_u - hi_u), mid + 0.12 * (s[s["other"]][1] - s[s["other"]][0])),
+                           feet_inches(max(y0, y1))))
+            labels.append((*P(lo_u - 0.1 * (lo_u - hi_u), mid + 0.12 * (s[s["other"]][1] - s[s["other"]][0])),
+                           feet_inches(min(y0, y1))))
+            labels.append((*P((u0 + u1) / 2, mid - 0.15 * (s[s["other"]][1] - s[s["other"]][0])), "SLOPE"))
     for s in surfs:                           # walls to the floor; steps in the ceiling are thin
-        full = s["axis"] != 1 and s.get("Y", [0, 0])[0] <= 0.5
-        if s["axis"] == 1 or (not full and not rcp): continue
+        full = s["axis"] in (0, 2) and s.get("Y", [0, 0])[0] <= 0.5
+        if s["axis"] in (1, 3) or (not full and not rcp): continue
         w, col = (3, INK) if full else (1, GREY)
         if s["axis"] == 0: sh.line((s["at"], s["Z"][0]), (s["at"], s["Z"][1]), col, w)
         if s["axis"] == 2: sh.line((s["X"][0], s["at"]), (s["X"][1], s["at"]), col, w)
@@ -294,7 +310,10 @@ def plan(project, rcp=False, show_all=False, design_file="design.json", out=None
     R.render(project, design_file=design_file, linework=True, size=(240, 360), write=False)
     m_arch = Model(project)                   # the model before ceiling elements cut it
     m, feats, rows, design = R.LAST["model"], R.LAST["features"], R.LAST["report"], R.LAST["design"]
-    keep = lambda y: show_all or ((y >= CEILING_MIN) if rcp else (y < CEILING_MIN))
+    ceilings = {x["name"] for x in m_arch.surfaces if (x["axis"] == 1 and x["at"] > 0.01) or x["axis"] == 3}
+    def on_ceiling(r):                        # on or hanging from a ceiling, or high up
+        return r.get("surface") in ceilings or float(r["y"]) >= CEILING_MIN
+    keep = lambda r: show_all or (on_ceiling(r) if rcp else not on_ceiling(r))
     x0, x1, z0, z1 = bounds(m_arch)
     sh = Sheet(x0, x1, z0, z1)
     draw_architecture(sh, m_arch, rcp)
@@ -308,11 +327,11 @@ def plan(project, rcp=False, show_all=False, design_file="design.json", out=None
                 what = draw_geometry(sh, m, fe, col)
                 if what: legend.append((fe["layer"], fe["type"], what, col))
             continue
-        lrows = [r for r in rows if r.get("layer") == fe["layer"] and keep(float(r["y"]))]
+        lrows = [r for r in rows if r.get("layer") == fe["layer"] and keep(r)]
         if not lrows: continue
         draw_light_feature(sh, m, fe, lrows, col)
     for name in layers:                       # point symbols on top
-        lrows = [r for r in rows if r.get("layer") == name and r["type"] not in GEOMETRY_TYPES and keep(float(r["y"]))]
+        lrows = [r for r in rows if r.get("layer") == name and r["type"] not in GEOMETRY_TYPES and keep(r)]
         if not lrows: continue
         col = colour[name]; types = sorted({r["type"] for r in lrows})
         for r in lrows:
@@ -348,7 +367,8 @@ def plan(project, rcp=False, show_all=False, design_file="design.json", out=None
         ly += 40
     if not legend:
         cv2.putText(sh.img, "no lights in this plan", (lx, ly), FONT, 0.45, GREY, 1, cv2.LINE_AA)
-    note = ("lights at 7 ft and above" if rcp else "lights below 7 ft") if not show_all else "all lights"
+    note = ("lights on or hanging from a ceiling, or 7 ft and above" if rcp else
+            "lights below 7 ft that are not on a ceiling") if not show_all else "all lights"
     cv2.putText(sh.img, note, (lx, sh.H - 40), FONT, 0.4, GREY, 1, cv2.LINE_AA)
     name = out or ("rcp.png" if rcp else "plan.png")
     os.makedirs(os.path.join(project, "out"), exist_ok=True)

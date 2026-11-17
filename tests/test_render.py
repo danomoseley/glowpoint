@@ -271,6 +271,43 @@ def main(update=False):
     print(f"{'PASS' if good else 'FAIL'}  photos: detected {is_photo(dark)}, drawing {not is_photo(white)}, "
           f"lit {lit:.0f} vs {dark[80:120, 130:170].mean():.0f}, texture kept, evening dims")
     ok &= good
+
+    # 15. sloped ceilings: ray hits at the slope height, lights on it, plan, and a clear error for coffers
+    sp = os.path.join(os.path.dirname(proj), "slope"); os.makedirs(sp, exist_ok=True)
+    msl = {"drawing": "none.png", "units": "ft", "camera": {"f": 700, "principal": [525, 350], "position": [0, 5, 0],
+           "yaw": 0, "pitch": 15, "roll": 0},
+           "surfaces": [{"name": "Floor", "axis": "Y", "at": 0, "X": [-10, 10], "Z": [0, 30]},
+                        {"name": "Slope", "axis": "slope", "along": "X", "from": [-10, 12], "to": [10, 8], "Z": [0, 30]},
+                        {"name": "Back wall", "axis": "Z", "at": 30, "X": [-10, 10], "Y": [0, 12]}]}
+    json.dump(msl, open(os.path.join(sp, "model.json"), "w"))
+    dsl = {"title": "", "legend": False, "layers": [{"name": "On slope", "features": [
+        {"type": "downlight", "plane": "Slope", "x": [-5, 5], "z": 15},
+        {"type": "pendant", "plane": "Slope", "x": 0, "z": 20, "drop": 3},
+        {"type": "track", "plane": "Slope", "direction": "x", "at": 10, "range": [-6, 6], "spacing": 4}]}]}
+    json.dump(dsl, open(os.path.join(sp, "design.json"), "w"))
+    from glowpoint.model import Model as _Ms, height_at as _h
+    msl_ = _Ms(sp); ids, P, _ = msl_.raycast((350, 525))
+    k = ids == 1
+    err = float(np.abs(P[k][:, 1] - (12 - 0.2 * (P[k][:, 0] + 10))).max()) if k.any() else 99
+    rep = render(sp, linework=True)
+    dl = [r for r in rep if r["type"] == "downlight"]; pe = [r for r in rep if r["type"] == "pendant"]
+    heads = [r for r in rep if r["type"] == "track head"]
+    pl = plan(sp, rcp=True)
+    nplan = sum(1 for _ in _csv.DictReader(open(os.path.join(sp, "out", "positions_rcp.csv"))))
+    bad = dict(dsl); bad["layers"] = [{"name": "W", "features": [{"type": "waffle", "plane": "Slope", "X": [-5, 5], "Z": [5, 15],
+                                                                  "module": 2, "depth": 0.5}]}]
+    json.dump(bad, open(os.path.join(sp, "design.bad.json"), "w"))
+    try:
+        render(sp, linework=True, design_file="design.bad.json", out_name="bad.png"); clear = False
+    except ValueError as e:
+        clear = "sloped" in str(e)
+    hy = sorted(float(r["y"]) for r in heads)
+    good = (err < 0.01 and [float(r["y"]) for r in dl] == [11.0, 9.0] and abs(float(pe[0]["y"]) - (10 - 3)) < 0.6
+            and len(heads) == 3 and hy[0] < hy[-1] - 1 and nplan == len(rep) and clear)
+    print(f"{'PASS' if good else 'FAIL'}  sloped ceiling: ray hits within {err:.4f} ft, downlights at "
+          f"{[float(r['y']) for r in dl]} ft, pendant {pe[0]['y']}, track heads follow the slope {hy[0]:.2f}..{hy[-1]:.2f}, "
+          f"plan {nplan}/{len(rep)}, coffers on a slope refused: {clear}")
+    ok &= good
     return ok
 
 

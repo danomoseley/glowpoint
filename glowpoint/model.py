@@ -33,6 +33,34 @@ def angles(R):
     return float(yaw), float(pitch), float(roll)
 
 AX = {"X": 0, "Y": 1, "Z": 2}
+SLOPE = 3            # internal axis number of a sloped surface
+
+
+def make_slope(s):
+    """A sloped surface: it rises along X or Z, from "from": [u0, y0] to "to": [u1, y1], over the range of the
+    other horizontal axis.  Adds the fields that the rest of glowpoint uses."""
+    k = AX[s["along"]]; other = "Z" if k == 0 else "X"
+    (u0, y0), (u1, y1) = s["from"], s["to"]
+    if abs(u1 - u0) < 1e-9: raise ValueError(f"slope {s['name']}: 'from' and 'to' are at the same {s['along']}")
+    s["axis"] = SLOPE; s["k"] = k; s["u0"], s["y0"], s["u1"], s["y1"] = u0, y0, u1, y1
+    s["grad"] = (y1 - y0) / (u1 - u0)
+    s[s["along"]] = sorted([u0, u1]); s["Y"] = sorted([y0, y1]); s["other"] = other
+    s["at"] = (y0 + y1) / 2                       # mean height (use height_at for the height at a point)
+    return s
+
+
+def height_at(s, x, z):
+    """Height of a level or sloped surface above the point (x, z)."""
+    if s["axis"] == SLOPE:
+        u = x if s["k"] == 0 else z
+        return s["y0"] + s["grad"] * (u - s["u0"])
+    return s["at"]
+
+
+def uv_keys(s):
+    """The two coordinates used for positions on a surface: (X, Z) on level and sloped surfaces,
+    (Z, Y) on walls at constant X, (X, Y) on walls at constant Z."""
+    return {0: ("Z", "Y"), 1: ("X", "Z"), 2: ("X", "Y"), SLOPE: ("X", "Z")}[s["axis"]]
 
 
 class Box:
@@ -68,7 +96,10 @@ class Model:
         self.C_drawing = self.C.copy()        # the drawing's eye: the room is on this side of every wall
         self.surfaces = []
         for s in d["surfaces"]:
-            s = dict(s); s["axis"] = AX[s["axis"]]; self.surfaces.append(s)
+            s = dict(s)
+            if s.get("axis") == "slope": s = make_slope(s)
+            else: s["axis"] = AX[s["axis"]]
+            self.surfaces.append(s)
         self.boxes = {b["name"]: Box(b) for b in d.get("boxes", [])}
         for b in self.boxes.values():
             self.surfaces += b.faces()
@@ -118,11 +149,15 @@ class Model:
         for i, s in enumerate(self.surfaces):
             a = s["axis"]
             with np.errstate(divide="ignore", invalid="ignore"):
-                t = (s["at"] - C[a]) / d[..., a]
+                if a == SLOPE:                     # y = y0 + grad (u - u0)
+                    k = s["k"]
+                    t = (s["y0"] + s["grad"] * (C[k] - s["u0"]) - C[1]) / (d[..., 1] - s["grad"] * d[..., k])
+                else:
+                    t = (s["at"] - C[a]) / d[..., a]
                 Q = C + t[..., None]*d
             ok = (t > 0) & np.isfinite(t)
             for k, key in enumerate("XYZ"):
-                if k == a: continue
+                if k == a or (a == SLOPE and key == "Y"): continue
                 lo, hi = s[key]; ok &= (Q[..., k] >= lo-1e-6) & (Q[..., k] <= hi+1e-6)
             for hole in s.get("holes", []):
                 ins = np.ones_like(ok)
@@ -134,9 +169,11 @@ class Model:
         return ids, P, best
 
     def to3d(self, surf, u, v):
-        """Plane coordinates -> 3D.  Horizontal planes: (X, Z).  Walls at constant X: (Z, Y).
+        """Plane coordinates -> 3D.  Horizontal and sloped planes: (X, Z).  Walls at constant X: (Z, Y).
         Walls at constant Z: (X, Y)."""
-        a = surf["axis"]; P = [0.0, 0.0, 0.0]; P[a] = surf["at"]
+        a = surf["axis"]
+        if a == SLOPE: return [u, height_at(surf, u, v), v]
+        P = [0.0, 0.0, 0.0]; P[a] = surf["at"]
         if a == 1: P[0], P[2] = u, v
         elif a == 0: P[2], P[1] = u, v
         else: P[0], P[1] = u, v

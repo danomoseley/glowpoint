@@ -11,7 +11,7 @@ def draw(m, shape=(700, 1050), floor_grid=4.0):
     for i, s in enumerate(m.surfaces):
         k = ids == i
         if not k.any(): continue
-        tone = {1: 246, 0: 252, 2: 240}[s["axis"]]
+        tone = {1: 246, 0: 252, 2: 240, 3: 243}[s["axis"]]
         if s["name"] == "Floor": tone = 250
         img[k] = tone
     if floor_grid:

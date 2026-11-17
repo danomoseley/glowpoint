@@ -3,6 +3,8 @@
   python3 -m glowpoint.measure SOURCE floor X Y              floor point under pixel (X, Y)
   python3 -m glowpoint.measure SOURCE height X1 Y1 X2 Y2     height of pixel 2 above floor pixel 1
   python3 -m glowpoint.measure SOURCE plane X Y AXIS VALUE   point under the pixel on the plane AXIS = VALUE
+  python3 -m glowpoint.measure SOURCE on X Y "Surface"       point under the pixel on a surface of the model
+                                                             (level, wall, or sloped; needs a project folder)
   python3 -m glowpoint.measure SOURCE project X Y Z          the pixel where a 3D point (ft) appears
   python3 -m glowpoint.measure SOURCE box X1 Y1 X2 Y2 [X3 Y3 ...] --top X Y [--name NAME]
                                                              a box from its visible base corners on the floor
@@ -55,7 +57,7 @@ class Cam:
 def main(argv=None):
     import argparse
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("source"); ap.add_argument("command", choices=["floor", "height", "plane", "project", "box"])
+    ap.add_argument("source"); ap.add_argument("command", choices=["floor", "height", "plane", "on", "project", "box"])
     ap.add_argument("values", nargs="+")
     ap.add_argument("--top", nargs=2, type=float, metavar=("X", "Y"), help="box: a top pixel above the first corner")
     ap.add_argument("--name", default="Object"); ap.add_argument("--kind", default="object")
@@ -72,6 +74,18 @@ def main(argv=None):
     elif a.command == "plane":
         if len(v) != 4 or v[2].upper() not in "XYZ": ap.error("plane needs: X Y AXIS VALUE, for example 620 180 Y 24")
         P = cam.on_plane(num(0), num(1), v[2].upper(), num(3)); print(f"X {P[0]:.2f}  Y {P[1]:.2f}  Z {P[2]:.2f}  ft")
+    elif a.command == "on":
+        if len(v) != 3: ap.error('on needs: X Y "Surface name", for example 900 300 "Ceiling slope"')
+        from glowpoint.model import Model, SLOPE
+        m = Model(a.source); srf = m.surface(v[2]); d = cam.ray(num(0), num(1)); C = cam.C
+        if srf["axis"] == SLOPE:
+            k = srf["k"]; t = (srf["y0"] + srf["grad"]*(C[k] - srf["u0"]) - C[1]) / (d[1] - srf["grad"]*d[k])
+        else:
+            ax = srf["axis"]; t = (srf["at"] - C[ax]) / d[ax]
+        if t <= 0: raise SystemExit("that pixel does not see this surface")
+        P = C + t*d
+        inside = all(srf[key][0] - 0.05 <= P[i] <= srf[key][1] + 0.05 for i, key in enumerate("XYZ") if key in srf)
+        print(f"X {P[0]:.2f}  Y {P[1]:.2f}  Z {P[2]:.2f}  ft  (on {srf['name']}{'' if inside else ', OUTSIDE its edges'})")
     elif a.command == "box":
         import json
         if len(v) < 4 or len(v) % 2: ap.error("box needs 2 to 4 corners: X1 Y1 X2 Y2 [X3 Y3 [X4 Y4]]")

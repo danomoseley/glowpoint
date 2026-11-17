@@ -71,7 +71,7 @@ def check_image(m, base, step=4.0):
         for i in lst:
             msk = ids == i; tint[msk] = col; a = m.surfaces[i]["axis"]
             for k in range(3):
-                if k == a: continue
+                if k == a or (a == 3 and k == 1): continue        # a slope gets the plan grid (X and Z)
                 u = P[..., k]; gy, gx = np.gradient(u); g = np.hypot(gx, gy)
                 grid |= msk & (np.abs(u-np.round(u/step)*step) < 0.75*g) & (g < step/2)
     msk = ids >= 0
@@ -166,7 +166,11 @@ def render(project, check=False, out_name="concept.png", design_file="design.jso
     for L in layers:
         for f in L["features"]:
             if f["type"] in geometry:
-                fe = evaluate(f, ns); fe["layer"] = L["name"]; geometry[f["type"]][0](m, fe); geo.append(fe)
+                fe = evaluate(f, ns); fe["layer"] = L["name"]
+                pl = fe.get("plane", "Ceiling")
+                if pl in m.by_name and m.by_name[pl]["axis"] == 3:
+                    raise ValueError(f"{f['type']} cannot be on the sloped surface '{pl}' yet: use a level surface")
+                geometry[f["type"]][0](m, fe); geo.append(fe)
     cv = F.Canvas(m, base); cv.raycast()
     cv.photo = is_photo(base, design.get("background", "auto"), linework)
     if cv.photo: print("background: photo (light brightens the surfaces)")

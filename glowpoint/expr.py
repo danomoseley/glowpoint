@@ -59,7 +59,11 @@ def namespace(model, visible=None):
                 out.append(s["name"])
         return out
 
-    return dict(box=box, surf=lambda n: Surf(model.surface(n)), gap=gap, centre_line=centre_line,
+    def height(n, x, z):
+        from glowpoint.model import height_at
+        return height_at(model.surface(n), x, z)
+
+    return dict(box=box, surf=lambda n: Surf(model.surface(n)), height=height, gap=gap, centre_line=centre_line,
                 inset=lambda r, d: (r[0]+d, r[1]-d), mid=lambda r: (r[0]+r[1])/2,
                 spaced=spaced, spaced_ends=spaced_ends, every=every, inch=lambda n: n/12,
                 visible_faces=visible_faces, min=min, max=max, abs=abs, round=round)

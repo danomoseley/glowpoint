@@ -63,7 +63,7 @@ Then name the one or two parts you are least sure of (rule 5). Show the full che
 
 > The model is ready. Describe the lighting as you would mark up a sketch for a colleague: what is lit, from where, the fixture type, counts and spacing, mounting heights, apertures, beam spreads, aiming, and CCT. Give positions relative to the architecture ("centred on the desk", "18 in off the wall", "every second coffer"), and the lights follow when the model changes. Ask for changes, other views, or options at any time; I keep the rest. If you leave out a value, I use a usual one and tell you which.
 >
-> It draws a diagrammatic concept, not a photometric render: no sloped or curved ceilings yet, and no illuminance calculations.
+> It draws a diagrammatic concept, not a photometric render: sloped ceilings that slope in one direction are fine, but no curved or vaulted ceilings yet, and no illuminance calculations.
 
 ## 3. Everyday rules
 
@@ -117,7 +117,7 @@ Send the picture `docs/menu.png` (one labelled example of each type) with this l
 > - **new placement words**, for example "between column A and column B" or "on every second window".
 > **Your custom types and fixtures** (made for this project, your other projects, or the office) are listed below with their names. To use one from another project, say for example "use the LED strip from the Smith lobby". If that project is from an earlier chat, upload its project file too.
 > A fixture from a spec sheet usually needs no plugin: I describe it with the fixture type, and I can save it in a fixture list for the project so you can reuse it by name.
-> A plugin cannot change how glowpoint reads the drawing or the camera, cannot make sloped or curved surfaces, and cannot calculate light levels. Those need a change to the glowpoint program itself. I tell you before I try one, and afterwards I give you a small file to send to the person who looks after glowpoint, so that everybody gets the change.
+> A plugin cannot change how glowpoint reads the drawing or the camera, cannot make curved or vaulted surfaces, and cannot calculate light levels. Those need a change to the glowpoint program itself. I tell you before I try one, and afterwards I give you a small file to send to the person who looks after glowpoint, so that everybody gets the change.
 
 ## 5. Tasks
 
@@ -195,6 +195,10 @@ Table lamps, floor lamps, candles: `glow` at the lamp shade (measure the shade w
 
 Set it up like a drawing (Task: set up a new image), with these differences: ask for one real dimension (a ceiling height or a door), because the camera height of a handheld photo is a guess; check that calibration used straight lines near the middle of the photo; model the furniture that lights fall on. glowpoint finds out by itself that it is a photo, and the light brightens the surfaces. If the photo is in daylight and the added light does not show, offer an evening version (`"photo_dim": 0.5` in design.json).
 
+### Task: a sloped ceiling
+
+When a ceiling slopes in one direction (a shed roof, half of a gable, a sloped edge), model it as a surface with `"axis": "slope"` (see the README, "Sloped ceilings"): measure its upper edge on the level ceiling and its lower edge on the wall, and check a point on it with `measure <project> on X Y "<name>"`. Place lights on it with `x` and `z`, like on a level ceiling. Coffers, coves, slats, and light wells cannot be on a slope yet; say so if the user asks.
+
 ### Task: plans
 
 When the user asks for a plan, a reflected ceiling plan (RCP), or a floor plan: `python3 -m glowpoint.plan local/<project> --rcp` (reflected ceiling plan, `out/rcp.png`) or without `--rcp` (floor plan, `out/plan.png`); `--all` puts every light in one plan. Send the image (rule 6). The plan comes from the same model and design, so after a design change, make the plan again if the user wants it current.
@@ -255,7 +259,7 @@ You may change the code in `glowpoint/` when a project needs a fix or a feature 
 
 > "This needs a change to the glowpoint program itself, not only to your project. I can make the change here, and it will work in this conversation. At the end I will give you a small text file that lists the changes. Please send it to the person who looks after glowpoint, so they can add it for everybody. It does not contain your drawings. Until they add it, a new conversation will not have this change. Do you want me to try?"
 
-For a large change (for example sloped ceilings or light-level calculations), say that it can take a long time and may not work well, and offer a second choice: a short written description of what is needed, for the user to send on. Then:
+For a large change (for example vaulted ceilings or light-level calculations), say that it can take a long time and may not work well, and offer a second choice: a short written description of what is needed, for the user to send on. Then:
 
 1. Make the change for everybody, not only for this project. Update README.md and AGENTS.md, and run all tests (see "Push to GitHub"). **Do not change the version number or CHANGELOG.md:** only the maintainer sets them, so two sessions cannot choose the same number.
 2. `python3 -m glowpoint.patch make "short title" --why "what was wrong and what you changed" --changelog "the line for the changelog"`. It compares with the original files that `doctor` saved (or use `--base` with the uploaded zip, for example `--base /mnt/data/glowpoint-main.zip`), runs the tests, and writes `local/patches/<date>-<title>.patch`. It leaves out the version and CHANGELOG.md, and the user's projects and drawings.

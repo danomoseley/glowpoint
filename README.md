@@ -203,12 +203,26 @@ The camera has two forms.
 | `camera.yaw`, `pitch`, `roll` | Turn to the right, tilt up, and roll, in degrees |
 | `camera.vp` | One-point form: the vanishing point in pixels |
 | `camera.eye_height` | One-point form: height of the eye above the floor, in feet |
-| `surfaces[].axis` | The axis the surface is perpendicular to. `Y` = floor, ceiling, soffit. `X` = left or right wall. `Z` = back wall |
+| `surfaces[].axis` | The axis the surface is perpendicular to. `Y` = floor, ceiling, soffit. `X` = left or right wall. `Z` = back wall. `slope` = a sloped ceiling (below) |
 | `surfaces[].at` | Position of the surface on that axis |
 | `surfaces[].X/Y/Z` | Size of the surface on the other two axes |
 | `boxes[]` | Columns and objects. `kind` is `column` or `object` |
 
 Each box makes five surfaces, named `"<name> front"`, `"back"`, `"left"`, `"right"`, and `"top"`. Front is the side at the low Z end (toward the drawing's camera), left is the low X side. On the drawing, objects (like the desk) are not drawn, because the drawing already shows them. In linework, check images, and other camera views they are drawn as boxes. They always hide light that is behind them, and lights can refer to them.
+
+**Sloped ceilings.** A surface with `"axis": "slope"` tilts about one horizontal direction: it rises or falls along X or Z, and runs straight across the other. This covers shed roofs, each half of a gable, and the sloped edge of a ceiling:
+
+```json
+{"name": "Ceiling slope", "axis": "slope", "along": "X", "from": [2.3, 7.5], "to": [5.6, 6.69], "Z": [0, 18.46]}
+```
+
+| Field | Meaning |
+|---|---|
+| `along` | `X` or `Z`: the direction in which the height changes |
+| `from`, `to` | `[position along that axis, height]` at the two edges of the slope |
+| `X` or `Z` | The range across (the other horizontal axis) |
+
+Lights on a slope take positions in plan, `x` and `z`, like on a level ceiling; their height comes from the slope (`height('Ceiling slope', x, z)` in an expression). Downlights lie in the slope with the beam straight down, pendants and linear pendants hang the right length, track follows the slope, flat fixtures, slots, and luminous areas sit on it, and washes, wallwashers, and 3D fixtures use its height. Coffers, coves, slats, and light wells need a level ceiling. To find a slope in an image: get its upper edge with `measure plane X Y Y <ceiling height>` and its lower edge with `measure plane X Y X <wall position>`; check a point with `measure <project> on X Y "Ceiling slope"`. The reflected ceiling plan shows a slope with its outline, the heights at both edges, and an arrow down the slope.
 
 Surfaces and boxes can have a `"note"` field. Use it to record how a value was found or what was assumed, for example a hidden end of an object.
 
@@ -762,6 +776,7 @@ Expressions refer to the model by name. Use them for all positions that depend o
 |---|---|
 | `box('Desk').x0`, `.x1`, `.xc`, `.z0`, `.z1`, `.zc`, `.y0`, `.top` | Edges and centre of a box |
 | `surf('Left soffit').at`, `.X`, `.Y`, `.Z` | Position and ranges of a surface |
+| `height('Ceiling slope', x, z)` | Height of a level or sloped surface above the point (x, z), ft. For example a pendant 3 ft below a sloped ceiling: `"y": "height('Ceiling slope', 4, 10) - 3"` |
 | `gap('Column L1', 'Column R1')` | (lo, hi) between the inner faces of two boxes, on X |
 | `gap('Column L1', 'Column L2', 'Z')` | The same, on Z |
 | `centre_line('Column L1', 'Column R1', 'Z')` | Average of the two box centres on an axis |
@@ -1110,7 +1125,7 @@ Two values for `x` and one for `z` make two lights.
 ## Limits
 
 - The room must have mostly square corners (two main horizontal directions at 90°). Angled walls can be added as boxes or surfaces, but they cannot set the camera.
-- Surfaces are flat rectangles that line up with the axes. No curved or sloped surfaces yet.
+- Surfaces are flat rectangles. They line up with the axes, or slope in one direction (`"axis": "slope"`). No curved surfaces, and no surfaces that slope in two directions (hips, vaults) yet. Coffers, coves, slats, and light wells need a level ceiling.
 - The model only knows what the drawing shows. Areas outside the drawing are guesses.
 - After the camera setup, the surfaces are measured by hand with the measure tool.
 

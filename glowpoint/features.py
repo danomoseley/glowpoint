@@ -9,6 +9,7 @@ A position can be one number or a list; lists make one light for each combinatio
 import itertools
 import numpy as np
 import cv2
+from glowpoint.model import SLOPE, height_at, uv_keys
 
 # ---- light colour. The renderer calls set_color() before each feature, so every type follows the
 # feature's "cct" (kelvin) or "light_color" ([R, G, B]). Diagram colours, not physical ones.
@@ -221,7 +222,8 @@ def downlight(cv, f):
     for x, z in itertools.product(as_list(f["x"]), as_list(f["z"])):
         c = m.to3d(s, x, z); rad = f.get("d", 8/12)/2
         th = np.linspace(0, 2*np.pi, 64, endpoint=False)
-        top = [[c[0]+rad*np.cos(t), c[1], c[2]+rad*np.sin(t)] for t in th]
+        top = [m.to3d(s, x+rad*np.cos(t), z+rad*np.sin(t)) for t in th] if s["axis"] in (1, SLOPE) else \
+            [[c[0]+rad*np.cos(t), c[1], c[2]+rad*np.sin(t)] for t in th]
         ty = f.get("beam_to", 0.0); pr = f.get("pool_r", 1.5)
         pool = [[c[0]+pr*np.cos(t), ty, c[2]+pr*np.sin(t)] for t in th]
         pt, pp = m.project(top), m.project(pool)
@@ -299,9 +301,10 @@ def wash(cv, f):
         sp = m.surface(f["slot"]["plane"]); wall = s["at"]
         side = 1.0 if m.C_drawing[a] > wall else -1.0               # the slot is always on the room side
         sx = side*abs(f["slot"]["offset"])
-        yv = sp["at"]
-        if a == 0: cv.seg([wall+sx, yv, u0], [wall+sx, yv, u1], 2)
-        else: cv.seg([u0, yv, wall+sx], [u1, yv, wall+sx], 2)
+        if a == 0: A_, B_ = [wall+sx, 0, u0], [wall+sx, 0, u1]
+        else: A_, B_ = [u0, 0, wall+sx], [u1, 0, wall+sx]
+        A_[1], B_[1] = height_at(sp, A_[0], A_[2]), height_at(sp, B_[0], B_[2])
+        cv.seg(A_, B_, 2)
     cv.add(f, "wash", f["plane"], m.to3d(s, u0, yt), note=f"range {u0:.2f}..{u1:.2f}")
 
 
@@ -375,11 +378,11 @@ def fixture(cv, f):
     rot = np.radians(f.get("rotate", 0)); cr, sr = np.cos(rot), np.sin(rot)
     glow = spec.get("glow")
     H, W = cv.ids.shape
-    if a == 1: keys = [("x", "z")]
+    if a in (1, SLOPE): keys = [("x", "z")]
     else: keys = [("along", "y")]
     for p1, p2 in itertools.product(as_list(f[keys[0][0]]), as_list(f[keys[0][1]])):
-        if a == 1:
-            at = f["y"] if "y" in f else s["at"]; c = [p1, at, p2]; ui, vi = 0, 2
+        if a in (1, SLOPE):
+            at = f["y"] if "y" in f else height_at(s, p1, p2); c = [p1, at, p2]; ui, vi = 0, 2
         elif a == 0:
             at = s["at"]; c = [at, p2, p1]; ui, vi = 2, 1
         else:
@@ -434,7 +437,7 @@ def luminous(cv, f):
     """A glowing area on a surface: a luminous ceiling, a backlit stretch ceiling, a light wall.
     Area: X and Z on horizontal surfaces, Z and Y on walls at constant X, X and Y on walls at constant Z."""
     m = cv.m; s = m.surface(f["plane"]); i = cv.sid(f["plane"]); a = s["axis"]
-    keys = [k for k in "XYZ" if k != "XYZ"[a]]
+    keys = list(uv_keys(s)) if a == SLOPE else [k for k in "XYZ" if k != "XYZ"[a]]
     P = cv.P; k = cv.ids == i
     soft = f.get("soft", 0.5)
     edge = np.ones(k.shape)
@@ -461,8 +464,10 @@ def luminous(cv, f):
             gy, gx = np.gradient(u); px = np.hypot(gx, gy)
             line = k & (np.abs(u - np.round(u/mod)*mod) < np.maximum(f.get("joint", 0.03)/2, 0.5*px)) & (px < mod/3)
             cv.img[line] = (cv.img[line]*0.75).astype(np.uint8)
-    c = [0.0, 0.0, 0.0]; c[a] = s["at"]
+    c = [0.0, 0.0, 0.0]
     for key in keys: c["XYZ".index(key)] = sum(f[key])/2
+    if a == SLOPE: c[1] = height_at(s, c[0], c[2])
+    else: c[a] = s["at"]
     area = np.prod([f[key][1]-f[key][0] for key in keys])
     cv.add(f, "luminous", f["plane"], c, visible=bool(k.any()), note=f"{area:.1f} sq ft" + (f", panels {mod*12:.0f} in" if mod else ""))
 
@@ -470,7 +475,7 @@ def luminous(cv, f):
 def slots(cv, f):
     """Narrow recessed lines in a surface: lit slots (lens) or track channels (track), as parallel lines or a grid."""
     m = cv.m; s = m.surface(f["plane"]); i = cv.sid(f["plane"]); a = s["axis"]
-    keys = [k for k in "XYZ" if k != "XYZ"[a]]                     # the two axes of the surface
+    keys = list(uv_keys(s)) if a == SLOPE else [k for k in "XYZ" if k != "XYZ"[a]]   # the two axes of the surface
     P = cv.P; k_area = cv.ids == i
     for key in keys:
         lo, hi = f[key]; c = P[..., "XYZ".index(key)]; k_area &= (c >= lo) & (c <= hi)
@@ -518,8 +523,10 @@ def slots(cv, f):
                 cv.img[edge] = (40, 40, 40)
     else:
         raise ValueError("slots style must be 'lens' or 'track'")
-    c = [0.0, 0.0, 0.0]; c[a] = s["at"]
+    c = [0.0, 0.0, 0.0]
     for key in keys: c["XYZ".index(key)] = sum(f[key])/2
+    if a == SLOPE: c[1] = height_at(s, c[0], c[2])
+    else: c[a] = s["at"]
     cv.add(f, "slots", f["plane"], c, visible=bool(band.any()),
            note=f"{style} {direction}, {n_lines} lines, {w*12:.1f} in wide, {pitch:.2f} ft apart")
 
@@ -532,7 +539,7 @@ def linear_pendant(cv, f):
     L = f.get("length", 4.0); wd = f.get("w", 0.3); hh = f.get("h", 0.25)
     ai = 2 if direction == "z" else 0; bi = 0 if direction == "z" else 2     # along, across
     for x, z in itertools.product(as_list(f["x"]), as_list(f["z"])):
-        top_y = f["from_y"] if "from_y" in f else (s["at"] if s else None)
+        top_y = f["from_y"] if "from_y" in f else (height_at(s, x, z) if s else None)
         if top_y is None: raise ValueError("linear_pendant needs 'plane' or 'from_y'")
         yb = f["y"] if "y" in f else top_y - f.get("drop", 4.0)            # bottom of the fixture
         c = np.array([x, yb + hh/2, z])
@@ -587,12 +594,17 @@ def _ray_hit(m, o, d):
     best, hit = np.inf, None
     for s in m.surfaces:
         a = s["axis"]
-        if abs(d[a]) < 1e-9: continue
-        t = (s["at"] - o[a]) / d[a]
+        if a == SLOPE:
+            k_ = s["k"]; den = d[1] - s["grad"]*d[k_]
+            if abs(den) < 1e-9: continue
+            t = (s["y0"] + s["grad"]*(o[k_] - s["u0"]) - o[1]) / den
+        else:
+            if abs(d[a]) < 1e-9: continue
+            t = (s["at"] - o[a]) / d[a]
         if t <= 1e-6 or t >= best: continue
         q = o + t*d; ok = True
         for k, key in enumerate("XYZ"):
-            if k == a: continue
+            if k == a or (a == SLOPE and key == "Y"): continue
             lo, hi = s[key]
             if not (lo - 1e-6 <= q[k] <= hi + 1e-6): ok = False; break
         if ok:
@@ -631,7 +643,10 @@ def _track(cv, f):
     n_heads_total = 0
     for at in as_list(f["at"]):
         def P3(u, du=0.0, y=None):
-            q = [0.0, 0.0, 0.0]; q[ai] = u; q[bi] = at + du; q[1] = yt if y is None else y; return q
+            q = [0.0, 0.0, 0.0]; q[ai] = u; q[bi] = at + du; q[1] = yt if y is None else y
+            if s is not None and s["axis"] == SLOPE and "from_y" not in f:   # on a slope: follow the slope
+                q[1] += height_at(s, q[0], q[2]) - yt
+            return q
         # ---- the track itself
         if mounting in ("surface", "suspended"):
             ytop = yt if mounting == "surface" else yt - f.get("drop", 3.0)
@@ -741,6 +756,9 @@ def wallwasher(cv, f):
     reach = f.get("reach", 8.0); st = f.get("strength", 0.95)
     total = np.zeros(k.shape)
     for u in us:
+        if mounting == "recessed":
+            cc = [0.0, 0.0, 0.0]; cc[a] = wall["at"] + side*off; cc[hk] = u
+            ytop = height_at(ceil, cc[0], cc[2])
         # scallop: starts a little below the source, brightest about 'off' below it, fades down the wall
         d = np.clip(ytop - Yp, 0, None)
         width = 0.35*sp + 0.45*d
